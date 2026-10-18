@@ -1,0 +1,57 @@
+{
+ "snapshots": [
+  [
+   "home",
+   [
+    "",
+    "    NAME          STATE          URL",
+    "  ────────────────────────────────────────────────────────",
+    "  # comfyui       ● running      http://127.0.0.1:8188   ┃",
+    "    com…-flux     ○ stopped      — port 8189             ┃",
+    "    sdxl          ● running      http://127.0.0.1:8190   ┃",
+    "    sd1…egacy     ○ stopped      — port 8191             ┃",
+    "    wan…video     ▲ incomplete   — port 8192             ┃",
+    "    hunyuan       ● running      http://127.0.0.1:8193   ┃",
+    "    flu…utumn     ○ stopped      — port 8194             ┃",
+    "    ltx-video     ○ stopped      — port 8195             │",
+    "    test          ▲ incomplete   — port 8196             │",
+    "    1–9 of 12 sandboxes",
+    "",
+    "  ◆ Pick a sandbox or an action",
+    "      + Install a new sandbox",
+    "      ◎ Check this PC",
+    "      × Quit",
+    "",
+    "  ↑↓  move    pgup pgdn  page    enter  open    ctrl+c  quit"
+   ]
+  ],
+  [
+   "menu",
+   [
+    "",
+    "    NAME              STATE          URL",
+    "  ────────────────────────────────────────────────────────",
+    "  # comfyui           ● running      http://127.0.0.1:8188",
+    "",
+    "  ◆ What do you want to do with comfyui?",
+    "   ❯ ↗ Open in browser   opens it in your browser",
+    "      ■ Stop",
+    "      ≡ Show logs",
+    "      ↑ Update…",
+    "      ↓ Back up",
+    "      ↥ Restore…",
+    "      ◇ Settings…",
+    "      ┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄",
+    "      ↻ Reinstall ComfyUI…",
+    "      ✗ Uninstall…",
+    "      ← Back",
+    "",
+    "",
+    "  ↑↓  move    enter  choose    esc  back    ctrl+c  quit"
+   ]
+  ]
+ ],
+ "opened": [],
+ "return_code": 0,
+ "error": null
+}

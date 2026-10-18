@@ -1,0 +1,291 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="320" viewBox="0 0 1280 320" role="img" aria-labelledby="t d">
+  <title id="t">ComfyUI Sandbox</title>
+  <desc id="d">Isolated ComfyUI on Windows. Inside the container a workflow runs through a custom node, which also tries to read your SSH keys and documents and to start PowerShell, and the container blocks each attempt.</desc>
+  <style>
+    /* GitHub shows this through an img tag: CSS animations play, scripts would not. */
+    .flow { stroke-dasharray: 3 13; animation: flow 0.9s linear infinite; }
+    @keyframes flow { to { stroke-dashoffset: -16; } }
+
+    .border { animation: march 2.4s linear infinite; }
+    @keyframes march { to { stroke-dashoffset: -36; } }
+
+    .bar { transform-box: fill-box; transform-origin: left center; animation: bar 3s linear infinite; }
+    @keyframes bar { 0% { transform: scaleX(0); } 85%, 100% { transform: scaleX(1); } }
+
+    .picture { animation: picture 3s ease-out infinite; }
+    @keyframes picture { 0%, 84% { opacity: 0.55; } 90% { opacity: 0.9; } 100% { opacity: 0.55; } }
+
+    .sheen { animation: sheen 6s ease-in-out infinite; }
+    @keyframes sheen { 0% { transform: translateX(0); } 35%, 100% { transform: translateX(500px); } }
+
+    /* The custom node's three attempts, one every 3 s on a 9 s loop. */
+    .a1 { animation-delay: 0s; }
+    .a2 { animation-delay: 3s; }
+    .a3 { animation-delay: 6s; }
+    .cmd, .res, .up, .down, .ring, .badge { opacity: 0; animation-duration: 9s; animation-iteration-count: infinite; }
+    .cmd { animation-name: cmd; }
+    .res { animation-name: res; }
+    .up { animation-name: up; animation-timing-function: ease-in; }
+    .down { animation-name: down; animation-timing-function: ease-in; }
+    .ring { animation-name: ring; transform-box: fill-box; transform-origin: center; }
+    .badge { animation-name: badge; transform-box: fill-box; transform-origin: center; }
+    @keyframes cmd { 0% { opacity: 0; } 2%, 30% { opacity: 1; } 33%, 100% { opacity: 0; } }
+    @keyframes res { 0%, 12% { opacity: 0; } 14%, 30% { opacity: 1; } 33%, 100% { opacity: 0; } }
+    @keyframes up {
+      0%, 3% { opacity: 0; transform: translateY(0); }
+      4% { opacity: 1; transform: translateY(0); }
+      12% { opacity: 1; transform: translateY(-68px); }
+      13%, 100% { opacity: 0; transform: translateY(-68px); }
+    }
+    @keyframes down {
+      0%, 3% { opacity: 0; transform: translateY(0); }
+      4% { opacity: 1; transform: translateY(0); }
+      12% { opacity: 1; transform: translateY(54px); }
+      13%, 100% { opacity: 0; transform: translateY(54px); }
+    }
+    @keyframes ring {
+      0%, 12% { opacity: 0; transform: scale(0.3); }
+      13% { opacity: 1; transform: scale(0.3); }
+      22%, 100% { opacity: 0; transform: scale(2.4); }
+    }
+    @keyframes badge {
+      0%, 12% { opacity: 0; transform: scale(0.6); }
+      14% { opacity: 1; transform: scale(1.08); }
+      16%, 29% { opacity: 1; transform: scale(1); }
+      32%, 100% { opacity: 0; transform: scale(1); }
+    }
+    .alarm { animation: alarm 3s ease-out infinite; }
+    @keyframes alarm { 0%, 11% { stroke-opacity: 0.45; } 13% { stroke-opacity: 1; } 30%, 100% { stroke-opacity: 0.45; } }
+
+    @media (prefers-reduced-motion: reduce) {
+      * { animation: none !important; }
+      .still { opacity: 1; }
+    }
+  </style>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#0a0d16"/>
+      <stop offset="1" stop-color="#141a2c"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#8a70ff"/>
+      <stop offset="0.5" stop-color="#58adff"/>
+      <stop offset="1" stop-color="#45e5d2"/>
+    </linearGradient>
+    <linearGradient id="sheen" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#ffffff" stop-opacity="0"/>
+      <stop offset="0.5" stop-color="#ffffff" stop-opacity="0.6"/>
+      <stop offset="1" stop-color="#ffffff" stop-opacity="0"/>
+    </linearGradient>
+    <!-- The pixel logo: the TUI's LOGO_PX, one cell a pixel, coloured as the logo is -->
+    <linearGradient id="logo-fill" gradientUnits="userSpaceOnUse" x1="57.0" y1="126.8" x2="221.8" y2="-78.2">
+      <stop offset="0.000" stop-color="#8972ff"/>
+      <stop offset="0.167" stop-color="#728cff"/>
+      <stop offset="0.333" stop-color="#5fa4ff"/>
+      <stop offset="0.500" stop-color="#4abcff"/>
+      <stop offset="0.667" stop-color="#45ccf1"/>
+      <stop offset="0.833" stop-color="#45d9e2"/>
+      <stop offset="1.000" stop-color="#45e5d2"/>
+    </linearGradient>
+    <clipPath id="logo-cells">
+      <rect x="72" y="92" width="14" height="15"/>
+      <rect x="86" y="92" width="14" height="15"/>
+      <rect x="100" y="92" width="14" height="15"/>
+      <rect x="128" y="92" width="14" height="15"/>
+      <rect x="142" y="92" width="14" height="15"/>
+      <rect x="156" y="92" width="14" height="15"/>
+      <rect x="184" y="92" width="14" height="15"/>
+      <rect x="198" y="92" width="14" height="15"/>
+      <rect x="226" y="92" width="14" height="15"/>
+      <rect x="240" y="92" width="14" height="15"/>
+      <rect x="268" y="92" width="14" height="15"/>
+      <rect x="282" y="92" width="14" height="15"/>
+      <rect x="296" y="92" width="14" height="15"/>
+      <rect x="324" y="92" width="14" height="15"/>
+      <rect x="352" y="92" width="14" height="15"/>
+      <rect x="380" y="92" width="14" height="15"/>
+      <rect x="408" y="92" width="14" height="15"/>
+      <rect x="436" y="92" width="14" height="15"/>
+      <rect x="72" y="107" width="14" height="15"/>
+      <rect x="128" y="107" width="14" height="15"/>
+      <rect x="156" y="107" width="14" height="15"/>
+      <rect x="184" y="107" width="14" height="15"/>
+      <rect x="212" y="107" width="14" height="15"/>
+      <rect x="240" y="107" width="14" height="15"/>
+      <rect x="268" y="107" width="14" height="15"/>
+      <rect x="324" y="107" width="14" height="15"/>
+      <rect x="338" y="107" width="14" height="15"/>
+      <rect x="352" y="107" width="14" height="15"/>
+      <rect x="380" y="107" width="14" height="15"/>
+      <rect x="408" y="107" width="14" height="15"/>
+      <rect x="436" y="107" width="14" height="15"/>
+      <rect x="72" y="122" width="14" height="15"/>
+      <rect x="128" y="122" width="14" height="15"/>
+      <rect x="156" y="122" width="14" height="15"/>
+      <rect x="184" y="122" width="14" height="15"/>
+      <rect x="212" y="122" width="14" height="15"/>
+      <rect x="240" y="122" width="14" height="15"/>
+      <rect x="268" y="122" width="14" height="15"/>
+      <rect x="282" y="122" width="14" height="15"/>
+      <rect x="338" y="122" width="14" height="15"/>
+      <rect x="380" y="122" width="14" height="15"/>
+      <rect x="408" y="122" width="14" height="15"/>
+      <rect x="436" y="122" width="14" height="15"/>
+      <rect x="72" y="137" width="14" height="15"/>
+      <rect x="86" y="137" width="14" height="15"/>
+      <rect x="100" y="137" width="14" height="15"/>
+      <rect x="128" y="137" width="14" height="15"/>
+      <rect x="142" y="137" width="14" height="15"/>
+      <rect x="156" y="137" width="14" height="15"/>
+      <rect x="184" y="137" width="14" height="15"/>
+      <rect x="240" y="137" width="14" height="15"/>
+      <rect x="268" y="137" width="14" height="15"/>
+      <rect x="338" y="137" width="14" height="15"/>
+      <rect x="380" y="137" width="14" height="15"/>
+      <rect x="394" y="137" width="14" height="15"/>
+      <rect x="408" y="137" width="14" height="15"/>
+      <rect x="436" y="137" width="14" height="15"/>
+    </clipPath>
+    <pattern id="grid" width="24" height="24" patternUnits="userSpaceOnUse">
+      <circle cx="1" cy="1" r="1" fill="#ffffff" opacity="0.06"/>
+    </pattern>
+    <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="6" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <!-- for what moves: a region in user space, so it never clips a moving part -->
+    <filter id="glow-wide" filterUnits="userSpaceOnUse" x="-500" y="-50" width="1280" height="400">
+      <feGaussianBlur stdDeviation="4" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+
+  <rect width="1280" height="320" rx="20" fill="url(#bg)"/>
+  <rect width="1280" height="320" rx="20" fill="url(#grid)"/>
+
+  <!-- Left: the pixel logo with a sheen crossing it, the wordmark and the tagline; 56 from the
+       edge, as the boundary on the right is -->
+  <g transform="translate(-16 0)">
+    <g clip-path="url(#logo-cells)">
+      <rect x="72" y="92" width="378" height="60" fill="url(#logo-fill)"/>
+      <polygon class="sheen" points="20,88 64,88 44,156 0,156" fill="url(#sheen)"/>
+    </g>
+    <text x="73" y="192" font-family="ui-monospace, 'Cascadia Code', Consolas, monospace"
+          font-size="18" font-weight="700" fill="#bcc4dc" letter-spacing="12">SANDBOX</text>
+    <text x="73" y="230" font-family="'Segoe UI', -apple-system, BlinkMacSystemFont, Helvetica, Arial, sans-serif"
+          font-size="20" fill="#8891b0">Isolated ComfyUI on Windows</text>
+  </g>
+
+  <!-- Right: a node graph inside the sandbox boundary -->
+  <g transform="translate(484 36)">
+    <rect class="border" x="0" y="0" width="740" height="248" rx="18" fill="#58adff" fill-opacity="0.03"
+          stroke="url(#accent)" stroke-width="2" stroke-dasharray="10 8"/>
+    <!-- boundary label -->
+    <rect x="24" y="-13" width="102" height="26" rx="6" fill="#0d1120"/>
+    <g transform="translate(36 -7)" fill="none" stroke="#8a70ff" stroke-width="2" stroke-linecap="round">
+      <rect x="0" y="6" width="12" height="9" rx="2" fill="#8a70ff" stroke="none"/>
+      <path d="M2.5 6 V3.5 a3.5 3.5 0 0 1 7 0 V6"/>
+    </g>
+    <text x="56" y="5" font-family="ui-monospace, 'Cascadia Code', Consolas, monospace" font-size="13" fill="#8a70ff">sandbox</text>
+
+    <!-- the graph, nudged to sit as far from either side of the boundary -->
+    <g transform="translate(3 0)">
+    <!-- wires, with data flowing along them: the workflow runs through the custom node -->
+    <g fill="none" stroke-width="3" stroke-linecap="round" filter="url(#glow)">
+      <path d="M150 96 C 175 96, 171 124, 196 124" stroke="#8a70ff"/>
+      <path d="M150 120 C 175 120, 171 148, 196 148" stroke="#58adff"/>
+      <path d="M336 132 C 362 132, 358 106, 384 106" stroke="#45e5d2"/>
+      <path d="M560 106 C 584 106, 584 112, 608 112" stroke="#bcc4dc"/>
+    </g>
+    <g fill="none" stroke="#eef1fa" stroke-width="3" stroke-linecap="round" stroke-opacity="0.85">
+      <path class="flow" d="M150 96 C 175 96, 171 124, 196 124"/>
+      <path class="flow" d="M150 120 C 175 120, 171 148, 196 148"/>
+      <path class="flow" d="M336 132 C 362 132, 358 106, 384 106"/>
+      <path class="flow" d="M560 106 C 584 106, 584 112, 608 112"/>
+    </g>
+
+    <g font-family="'Segoe UI', Helvetica, Arial, sans-serif" font-size="13">
+      <!-- node: checkpoint -->
+      <rect x="20" y="60" width="130" height="84" rx="10" fill="#161c2e" stroke="#2a3350"/>
+      <path d="M20 70 a10 10 0 0 1 10 -10 h110 a10 10 0 0 1 10 10 v12 h-130 z" fill="#1f2740"/>
+      <text x="32" y="77" fill="#e3e7f3" font-weight="600">Load Checkpoint</text>
+      <text x="138" y="100" fill="#8891b0" text-anchor="end">MODEL</text>
+      <text x="138" y="124" fill="#8891b0" text-anchor="end">CLIP</text>
+      <circle cx="150" cy="96" r="5" fill="#8a70ff"/>
+      <circle cx="150" cy="120" r="5" fill="#58adff"/>
+
+      <!-- node: sampler -->
+      <rect x="196" y="88" width="140" height="104" rx="10" fill="#161c2e" stroke="#2a3350"/>
+      <path d="M196 98 a10 10 0 0 1 10 -10 h120 a10 10 0 0 1 10 10 v12 h-140 z" fill="#1f2740"/>
+      <text x="208" y="105" fill="#e3e7f3" font-weight="600">KSampler</text>
+      <text x="208" y="128" fill="#8891b0">model</text>
+      <text x="208" y="152" fill="#8891b0">clip</text>
+      <text x="324" y="136" fill="#8891b0" text-anchor="end">LATENT</text>
+      <rect x="208" y="164" width="116" height="14" rx="4" fill="#0a0d16"/>
+      <rect class="bar" x="208" y="164" width="116" height="14" rx="4" fill="url(#accent)" opacity="0.75"/>
+      <circle cx="196" cy="124" r="5" fill="#8a70ff"/>
+      <circle cx="196" cy="148" r="5" fill="#58adff"/>
+      <circle cx="336" cy="132" r="5" fill="#45e5d2"/>
+
+      <!-- node: a custom node in the workflow, that also tries to get out -->
+      <rect class="alarm" x="384" y="68" width="176" height="126" rx="10" fill="#161c2e" stroke="#ff5f7e" stroke-width="1.5"/>
+      <path d="M384 78 a10 10 0 0 1 10 -10 h156 a10 10 0 0 1 10 10 v12 h-176 z" fill="#3b1f33"/>
+      <text x="396" y="85" fill="#ffd0da" font-weight="600">Free Upscaler Pro</text>
+      <text x="396" y="110" fill="#8891b0">latent</text>
+      <text x="548" y="110" fill="#8891b0" text-anchor="end">IMAGE</text>
+      <circle cx="384" cy="106" r="5" fill="#45e5d2"/>
+      <circle cx="560" cy="106" r="5" fill="#bcc4dc"/>
+      <rect x="396" y="118" width="152" height="48" rx="6" fill="#0a0d16"/>
+      <text x="396" y="184" fill="#8891b0" font-size="12">custom node</text>
+
+      <!-- node: save image -->
+      <rect x="608" y="44" width="106" height="150" rx="10" fill="#161c2e" stroke="#2a3350"/>
+      <path d="M608 54 a10 10 0 0 1 10 -10 h86 a10 10 0 0 1 10 10 v12 h-106 z" fill="#1f2740"/>
+      <text x="620" y="61" fill="#e3e7f3" font-weight="600">Save Image</text>
+      <circle cx="608" cy="112" r="5" fill="#bcc4dc"/>
+      <rect x="620" y="78" width="82" height="104" rx="6" fill="url(#accent)" opacity="0.18"/>
+      <path class="picture" d="M620 168 l22 -28 l16 18 l12 -12 l32 22 v8 a6 6 0 0 1 -6 6 h-70 a6 6 0 0 1 -6 -6 z" fill="url(#accent)"/>
+      <circle cx="678" cy="102" r="9" fill="#bcc4dc" opacity="0.85"/>
+    </g>
+
+    <!-- what it tries, and what it gets -->
+    <g font-family="ui-monospace, 'Cascadia Code', Consolas, monospace" font-size="11">
+      <text class="cmd a1 still" x="404" y="137" fill="#ffb3c1">› open C:\…\.ssh</text>
+      <text class="res a1 still" x="416" y="156" fill="#ff5f7e">no C: drive here</text>
+      <text class="cmd a2" x="404" y="137" fill="#ffb3c1">› open C:\…\Documents</text>
+      <text class="res a2" x="416" y="156" fill="#ff5f7e">no C: drive here</text>
+      <text class="cmd a3" x="404" y="137" fill="#ffb3c1">› run powershell.exe</text>
+      <text class="res a3" x="416" y="156" fill="#ff5f7e">command not found</text>
+    </g>
+
+    <!-- each attempt flies at the wall, and stops there -->
+    <g fill="#ff5f7e" filter="url(#glow-wide)">
+      <circle class="up a1" cx="428" cy="68" r="4"/>
+      <circle class="down a2" cx="472" cy="194" r="4"/>
+      <circle class="up a3" cx="516" cy="68" r="4"/>
+    </g>
+    <g fill="none" stroke="#ff5f7e" stroke-width="2">
+      <circle class="ring a1" cx="428" cy="0" r="10"/>
+      <circle class="ring a2" cx="472" cy="248" r="10"/>
+      <circle class="ring a3" cx="516" cy="0" r="10"/>
+    </g>
+    <g font-family="ui-monospace, 'Cascadia Code', Consolas, monospace" font-size="11" font-weight="700">
+      <g class="badge a1 still">
+        <rect x="382" y="-12" width="92" height="24" rx="12" fill="#2a1220" stroke="#ff5f7e"/>
+        <path d="M396 -4 l8 8 m0 -8 l-8 8" stroke="#ff8fa3" stroke-width="2" stroke-linecap="round"/>
+        <text x="434" y="4" text-anchor="middle" fill="#ff8fa3">BLOCKED</text>
+      </g>
+      <g class="badge a2">
+        <rect x="426" y="236" width="92" height="24" rx="12" fill="#2a1220" stroke="#ff5f7e"/>
+        <path d="M440 244 l8 8 m0 -8 l-8 8" stroke="#ff8fa3" stroke-width="2" stroke-linecap="round"/>
+        <text x="478" y="252" text-anchor="middle" fill="#ff8fa3">BLOCKED</text>
+      </g>
+      <g class="badge a3">
+        <rect x="470" y="-12" width="92" height="24" rx="12" fill="#2a1220" stroke="#ff5f7e"/>
+        <path d="M484 -4 l8 8 m0 -8 l-8 8" stroke="#ff8fa3" stroke-width="2" stroke-linecap="round"/>
+        <text x="522" y="4" text-anchor="middle" fill="#ff8fa3">BLOCKED</text>
+      </g>
+    </g>
+    </g>
+  </g>
+</svg>

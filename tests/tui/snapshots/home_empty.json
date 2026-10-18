@@ -1,0 +1,42 @@
+{
+ "snapshots": [
+  [
+   "empty home",
+   [
+    "",
+    "<logo>   S A N D B O X",
+    "<logo>   v1.0.0",
+    "",
+    "  ╭┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄╮",
+    "  ┆                                                             ┆",
+    "  ┆   ◇ No sandboxes yet                                        ┆",
+    "  ┆   Install one to get started: it takes about ten minutes.   ┆",
+    "  ┆                                                             ┆",
+    "  ╰┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄╯",
+    "",
+    "  ◆ Pick a sandbox or an action",
+    "   ❯ + Install a new sandbox   an isolated ComfyUI in its own WSL distro",
+    "      ◎ Check this PC",
+    "      × Quit",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "  ↑↓  move    enter  choose    ctrl+c  quit                                       GPU <bar:10> <pct>   VRAM  0.0/24 GB"
+   ]
+  ]
+ ],
+ "opened": [],
+ "return_code": 0,
+ "error": null
+}

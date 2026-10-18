@@ -1,0 +1,42 @@
+{
+ "snapshots": [
+  [
+   "update",
+   [
+    "",
+    "",
+    "",
+    "<banner>",
+    "<banner>",
+    "<banner>",
+    "<banner>",
+    "<banner>",
+    "<banner>",
+    "",
+    "                                                 S A N D B O X   v1.0.0",
+    "",
+    "                                                        comfyui",
+    "                   ComfyUI  0.3.66 ↑       │   Frontend  1.28.7    │   Custom nodes  6",
+    "                   PyTorch  2.9.0+cu130    │   Python    3.12.3    │   Models        ~/comfyui-models",
+    "",
+    "                                          ●  Running at http://127.0.0.1:8188",
+    "                                                 opened in your browser",
+    "",
+    "                                             ↑ ComfyUI 0.3.70 is available",
+    "",
+    "                                                  l  show the full log",
+    "",
+    "",
+    "",
+    "",
+    "                                          ▍ Closing this window stops ComfyUI.",
+    "",
+    "",
+    "  l  full log"
+   ]
+  ]
+ ],
+ "opened": [],
+ "return_code": null,
+ "error": null
+}

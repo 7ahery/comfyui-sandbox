@@ -1,0 +1,32 @@
+{
+ "snapshots": [
+  [
+   "running",
+   [
+    "",
+    "<banner>",
+    "<banner>",
+    "",
+    "                   S A N D B O X   v1.0.0",
+    "",
+    "                          comfyui",
+    " ComfyUI       0.3.66           │   PyTorch  2.9.0+cu130",
+    " Frontend      1.28.7           │   Python   3.12.3",
+    " Custom nodes  6                │   Models   ~/…/comfyui-m…",
+    "",
+    "            ●  Running at http://127.0.0.1:8188",
+    "                   opened in your browser",
+    "",
+    "                    l  show the full log",
+    "",
+    "            ▍ Closing this window stops ComfyUI.",
+    "",
+    "",
+    "  l  full log"
+   ]
+  ]
+ ],
+ "opened": [],
+ "return_code": null,
+ "error": null
+}

@@ -1,0 +1,133 @@
+[project]
+name = "comfyui-sandbox"
+version = "1.0.0"
+description = "Set up and run ComfyUI in an isolated WSL2 distro with Docker, from one command."
+authors = [{ name = "Michael Tahery" }]
+license = "MIT"
+license-files = ["LICENSE"]
+requires-python = ">=3.14"
+dependencies = [
+    "typer>=0.19",
+    "rich>=14",
+    "questionary>=2.1",
+    "textual>=8.2.8",
+]
+
+[project.scripts]
+comfyui-sandbox = "comfyui_sandbox.cli:entry"
+
+[build-system]
+requires = ["uv_build>=0.12.23,<0.13.0"]
+build-backend = "uv_build"
+
+[dependency-groups]
+dev = [
+    "import-linter>=2.15",
+    "pytest>=8",
+    "pytest-xdist>=3.6",
+    "ruff==0.17.0",  # a new version can stabilize rules under the selected prefixes, so upgrades are deliberate
+    "shellcheck-py>=0.11.0.1",
+    "ty==0.0.88",  # pre-1.0: a new version can bring new diagnostics, so upgrades are deliberate
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["tests"]
+addopts = "-ra -n auto"
+markers = ["windows_only: exercises the real Win32 APIs; skipped off Windows"]
+
+# Ruff lints and formats the project. tests/test_ruff.py runs both, so a drift from the style fails
+# the suite instead of piling up. 120 columns is what the code was written to.
+[tool.ruff]
+target-version = "py314"
+line-length = 120
+
+[tool.ruff.lint]
+select = ["E", "W", "F", "I", "B", "UP", "SIM", "C4", "PIE", "RUF"]
+ignore = [
+    # The formatter owns line length: long strings and comments stay as written.
+    "E501",
+    # The UI text deliberately uses Unicode box-drawing and ellipsis characters.
+    "RUF001", "RUF002", "RUF003",
+    # Textual's own idiom is a plain `BINDINGS = [...]` class attribute, which is what every
+    # finding of this rule is.
+    "RUF012",
+]
+
+[tool.ruff.lint.per-file-ignores]
+# Tests import pytest fixtures from helper modules and take them as parameters, which ruff sees as
+# a redefinition of an unused import (F811), or the import as unused (F401). The import is what
+# registers the fixture.
+"tests/**" = ["F811", "F401"]
+
+[tool.ruff.lint.flake8-bugbear]
+# Typer declares options and arguments as call defaults, which is its idiom. LogoLook is a frozen
+# dataclass, so its default instance can't be mutated.
+extend-immutable-calls = ["typer.Option", "typer.Argument", "comfyui_sandbox.tui.logo.LogoLook"]
+
+[tool.ruff.lint.isort]
+# The helper modules in tests/ (and tests/tui/) are imported as top-level modules, because pytest
+# puts those folders on sys.path.
+known-first-party = ["comfyui_sandbox", "fakes", "toolchain", "wslcalls", "scenarios"]
+
+# ty (Astral's type checker, pre-1.0) checks the source and the tests. tests/test_ty.py runs it, so
+# a type error fails the suite.
+[tool.ty.environment]
+# The helper modules in tests/ (and tests/tui/) are imported as top-level modules, because pytest
+# puts those folders on sys.path.
+extra-paths = ["tests", "tests/tui"]
+
+[tool.ty.src]
+include = ["src", "tests"]
+
+# Two front ends over one core (docs/adr/0017-two-front-ends-over-one-core.md). These contracts
+# make the decoupling fail the suite when it breaks; tests/test_import_rules.py runs them and
+# shows that each one catches a planted import.
+[tool.importlinter]
+root_packages = ["comfyui_sandbox"]
+# Textual is a third-party package: a contract can name it only when external packages are in the
+# import graph.
+include_external_packages = true
+
+[[tool.importlinter.contracts]]
+name = "The core doesn't import the TUI or Textual"
+# "Protected": only the TUI itself may import the TUI or Textual. Direct imports are enough here:
+# any chain from the core into the TUI has to cross the line with a direct import somewhere.
+type = "protected"
+protected_modules = ["comfyui_sandbox.tui", "textual"]
+allowed_importers = ["comfyui_sandbox.tui"]
+# The one exception: the front-end launcher, which opens the TUI when `main()` picks it. It imports
+# `tui.entry` inside the function (the laziness test checks that), so a plain command never loads
+# Textual. Any other import of the TUI from the core still breaks this contract.
+ignore_imports = ["comfyui_sandbox.front_end -> comfyui_sandbox.tui.entry"]
+
+[[tool.importlinter.contracts]]
+name = "Inside the TUI, only the gateway layer imports the core"
+type = "forbidden"
+source_modules = ["comfyui_sandbox.tui"]
+# Every sibling of `tui`. import-linter skips a source/forbidden pair that overlaps, so `tui`
+# matching its own wildcard isn't flagged, and a new core module is covered without editing this.
+forbidden_modules = ["comfyui_sandbox.*"]
+# The gateway layer is the one door, so its own imports of the core don't count. Screens then
+# reach the core only through it, which is the design, so indirect imports are allowed.
+ignore_imports = [
+    "comfyui_sandbox.tui.gateway -> comfyui_sandbox.**",
+    "comfyui_sandbox.tui.gateway.** -> comfyui_sandbox.**",
+]
+# Until the real gateway arrives the gateway imports nothing from the core: an ignore that
+# matches no import is expected, not an error.
+unmatched_ignore_imports_alerting = "none"
+allow_indirect_imports = true
+
+[[tool.importlinter.contracts]]
+name = "The TUI doesn't import the platform layer directly"
+# Windows mechanisms stay in the core behind `Deps`, so a Linux core can replace them without a
+# TUI change. Direct imports only: the gateway reaching them through `main()` and the core is
+# how it's meant to work. The standard library's own ways to start a process, open a browser or
+# call Win32 count too: through them the TUI would grow platform code of its own (the demo
+# gateway opens its run window and the browser through the core's WinApi instead).
+type = "forbidden"
+source_modules = ["comfyui_sandbox.tui"]
+forbidden_modules = ["comfyui_sandbox.winapi", "comfyui_sandbox.wsl", "comfyui_sandbox.runner",
+                     "subprocess", "webbrowser", "ctypes", "winreg", "msvcrt"]
+allow_indirect_imports = true

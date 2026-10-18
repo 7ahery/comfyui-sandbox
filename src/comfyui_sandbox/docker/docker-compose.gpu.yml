@@ -1,0 +1,14 @@
+# GPU add-on for docker-compose.yml. .env loads it in NVIDIA mode with
+#   COMPOSE_FILE=docker-compose.yml:docker-compose.gpu.yml
+# CPU-only installs leave it out.
+services:
+  comfyui:
+    # Give the container access to all NVIDIA GPUs
+    # (requires the NVIDIA Container Toolkit).
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]

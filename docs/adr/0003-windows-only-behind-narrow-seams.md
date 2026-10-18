@@ -1,0 +1,3 @@
+# Windows only for now, behind narrow seams
+
+The CLI supports Windows with WSL2 only: NVIDIA first, with a CPU-only fallback. There is no host abstraction layer. Linux support is likely in a later version, so the Windows-specific parts are kept in a few places: commands reach the distro only through `wsl.py`'s interface (run a script or a command, as root or as the Linux user, with env vars), never by building `wsl.exe` arguments themselves, and Win32 calls live only in `winapi.py` and `shell_api.py`. Adding a platform should mean new implementations behind those seams, not a rewrite of the commands.

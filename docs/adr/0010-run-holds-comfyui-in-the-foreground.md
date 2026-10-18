@@ -1,0 +1,3 @@
+# `run` holds ComfyUI in the foreground; `start` opens a run window
+
+ComfyUI runs while a run window is open. `comfyui-sandbox run` starts the container, holds the distro up, opens the browser, and stops the container when the window ends (Ctrl+C, closing the console, or an error). `start` opens a detached `run` window and waits until Windows reaches ComfyUI. `stop` runs `docker compose stop`; the run window sees the container stop and exits by itself. There is at most one run window per distro, guarded by a named mutex, the run-window marker, that Windows frees if the window dies, so a crash leaves no stale marker. The desktop and Start menu shortcuts run `comfyui-sandbox run`.
