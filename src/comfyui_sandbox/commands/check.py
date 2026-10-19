@@ -17,7 +17,7 @@ from comfyui_sandbox.errors import CliError, ExitCode
 from comfyui_sandbox.hostinfo import HostFacts
 from comfyui_sandbox.output import Outcome, Output
 from comfyui_sandbox.runner import CommandNotFound, CommandTimeout, Runner
-from comfyui_sandbox.wsl import MIN_VERSION, Version, Wsl
+from comfyui_sandbox.wsl import MIN_KERNEL, MIN_VERSION, Version, Wsl
 
 UBUNTU = "Ubuntu-26.04"
 
@@ -236,6 +236,7 @@ def _wsl(report: Report, wsl: Wsl) -> None:
     info: dict[str, Any] = {
         "installed": wsl.installed(),
         "version": None,
+        "kernel": None,
         "ubuntu_26_04_available": None,
         "distros": [],
     }
@@ -264,7 +265,18 @@ def _wsl(report: Report, wsl: Wsl) -> None:
             f"WSL {version.text} is too old: {minimum} or newer is required. {PREREQS} (it runs 'wsl --update').",
         )
         return
+    info["kernel"] = version.kernel_text
+    minimum_kernel = ".".join(map(str, MIN_KERNEL))
+    if version.kernel is None or version.kernel < MIN_KERNEL:
+        shown = version.kernel_text or "unknown"
+        report.fail(
+            ExitCode.WSL_NOT_READY,
+            f"WSL kernel {shown} is too old to boot {UBUNTU}. "
+            f"{minimum_kernel} or newer is required. {PREREQS} (it runs 'wsl --update').",
+        )
+        return
     report.ok(version.first_line)
+    report.ok(f"WSL kernel {version.kernel_text}")
     info["ubuntu_26_04_available"] = wsl.online_has(UBUNTU)
     if info["ubuntu_26_04_available"]:
         report.ok(f"{UBUNTU} available")

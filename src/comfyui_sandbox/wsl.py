@@ -33,8 +33,11 @@ from comfyui_sandbox.runner import Completed, Process, Runner
 WSL = "wsl.exe"
 ENV = {"WSL_UTF8": "1"}
 # Ubuntu 26.04 ships only in the .wsl format, which (with `wsl --install --name/--location`)
-# needs WSL 2.4.4 or newer.
+# needs WSL 2.4.4 or newer. That floor is not enough to boot the image: WSL 2.4.10 still
+# ships kernel 5.15, installs the distro, and then dies on the first command inside it
+# (Wsl/Service/E_UNEXPECTED). Kernel 6.6 is the oldest this tool treats as able to boot it.
 MIN_VERSION = (2, 4, 4)
+MIN_KERNEL = (6, 6)
 TIMEOUT = 60
 # A call in the distro that passes no timeout gets this one, so a hung Docker can't hang the CLI.
 # Long steps pass their own; pass `timeout=None` only for a call meant to run until the user stops it.
@@ -44,6 +47,7 @@ UBUNTU = "Ubuntu-26.04"
 # `wsl --install` downloads the image: allow for a slow connection.
 INSTALL_TIMEOUT = 3600
 ENV_NAME = re.compile(r"[A-Za-z_][A-Za-z0-9_]*")
+KERNEL_NUMBER = re.compile(r"(\d+)\.(\d+)\.(\d+)(?:\.(\d+))?")
 # Run elevated by `prereqs` (through winapi.run_elevated, not the Runner). Both work with
 # only the Windows inbox stub, which is all there is before WSL is installed.
 INSTALL_ARGV = (WSL, "--install", "--no-distribution")
@@ -63,15 +67,20 @@ class ScriptNotFound(CliError):
 
 @dataclass(frozen=True)
 class Version:
-    """`wsl --version`: `number` is None when WSL didn't answer with one."""
+    """`wsl --version`: `number` and `kernel` are None when WSL didn't answer with one."""
 
     returncode: int
     first_line: str
     number: tuple[int, ...] | None
+    kernel: tuple[int, ...] | None = None
 
     @property
     def text(self) -> str | None:
         return ".".join(map(str, self.number)) if self.number else None
+
+    @property
+    def kernel_text(self) -> str | None:
+        return ".".join(map(str, self.kernel)) if self.kernel else None
 
 
 def script_names() -> list[str]:
@@ -93,6 +102,19 @@ def _check_env(env: Mapping[str, str]) -> dict[str, str]:
         if not ENV_NAME.fullmatch(key):
             raise ValueError(f"bad environment variable name: {key!r}")
     return {k: str(v) for k, v in env.items()}
+
+
+def _kernel(text: str) -> tuple[int, ...] | None:
+    """The kernel from `wsl --version`. The line is localized ("Kernel version:",
+    "Kernelversion:"); the number is what matters. The trailing "-1" is a package
+    revision, not part of the version."""
+    for line in text.splitlines():
+        if "kernel" not in line.lower():
+            continue
+        found = KERNEL_NUMBER.search(line)
+        if found:
+            return tuple(int(part) for part in found.groups() if part is not None)
+    return None
 
 
 def script_stdin(name: str, text: str, env: Mapping[str, str]) -> bytes:
@@ -233,8 +255,9 @@ class Wsl:
         first = lines[0].strip() if lines else ""
         # The first line is localized ("WSL version: 2.6.1.0", "WSL-Version: ..."): match the number.
         found = re.search(r"(\d+)\.(\d+)\.(\d+)(?:\.(\d+))?", first)
-        number = tuple(int(g) for g in found.groups() if g is not None) if found else None
-        return Version(done.returncode, first, number if done.returncode == 0 else None)
+        answered = done.returncode == 0
+        number = tuple(int(g) for g in found.groups() if g is not None) if found and answered else None
+        return Version(done.returncode, first, number, _kernel(done.out()) if answered else None)
 
     def _names(self, *args: str) -> list[str]:
         done = self._run(*args)

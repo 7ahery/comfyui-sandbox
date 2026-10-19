@@ -169,7 +169,7 @@ from Windows carry it too.
 | `gpu.cuda_version_suggested` | `"12.8"` for a Blackwell card whose driver supports it, else null. |
 | `gpu.windows_gpus` | Exit 3: the GPUs Windows reports. Exit 6: the NVIDIA devices. |
 | `virtualization` | `{"hypervisor", "firmware_enabled", "virtual_machine_platform": "enabled"\|"disabled"\|"absent"}` |
-| `wsl` | `{"installed", "version", "ubuntu_26_04_available", "distros"}` |
+| `wsl` | `{"installed", "version", "kernel", "ubuntu_26_04_available", "distros"}`. `kernel` is the WSL kernel, such as `"6.6.87.2"`, or null when WSL did not report one. |
 | `drives` | `[{"drive": "C:", "free_gb"}]`, fixed local drives. |
 | `c_free_gb`, `user_profile`, `win_user_suggested` | Free space on C:, `%USERPROFILE%`, and the lowercased `%USERNAME%` when it is a valid Linux user name. |
 | `wsl_limits` | `{"host_ram_gb", "host_cpus", "memory_gb", "memory_low_gb", "processors", "swap_gb"}`, the suggested `.wslconfig` limits. |

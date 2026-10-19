@@ -195,6 +195,29 @@ def test_wsl_not_installed_exits_7_without_ever_calling_wsl_exe(check, machine, 
     assert wsl_calls(runner) == []
 
 
+def test_wsl_kernel_older_than_6_6_exits_7_even_when_the_package_is_new_enough(check, machine):
+    machine.wsl_version = "WSL version: 2.4.10.0\nKernel version: 5.15.167.4-1\n"
+
+    result = check()
+
+    assert result.exit_code == 7
+    assert "5.15.167.4" in result.stderr and "6.6" in result.stderr
+    assert "comfyui-sandbox prereqs" in result.json["message"]
+    wsl = result.json["data"]["wsl"]
+    assert wsl["version"] == "2.4.10.0"
+    assert wsl["kernel"] == "5.15.167.4"
+
+
+def test_wsl_that_reports_no_kernel_exits_7(check, machine):
+    machine.wsl_version = "WSL version: 2.6.1.0\n"
+
+    result = check()
+
+    assert result.exit_code == 7
+    assert "kernel unknown" in result.stderr
+    assert result.json["data"]["wsl"]["kernel"] is None
+
+
 def test_wsl_older_than_2_4_4_exits_7(check, machine):
     machine.wsl_version = "WSL-Version: 2.4.3.0\nKernelversion: 6.6.36.6-1\n"
 
@@ -232,6 +255,7 @@ def test_ready_wsl_reports_version_ubuntu_and_existing_distros(check, runner):
     assert wsl == {
         "installed": True,
         "version": "2.6.1.0",
+        "kernel": "6.6.87.2",
         "ubuntu_26_04_available": True,
         "distros": ["Ubuntu", "comfy-docker"],
     }

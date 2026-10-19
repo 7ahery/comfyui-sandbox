@@ -19,7 +19,7 @@ from comfyui_sandbox.errors import AnswerMissing, CliError, ExitCode
 from comfyui_sandbox.output import Outcome
 from comfyui_sandbox.runner import Runner
 from comfyui_sandbox.winapi import ElevationDeclined
-from comfyui_sandbox.wsl import INSTALL_ARGV, MIN_VERSION, UPDATE_ARGV, Wsl
+from comfyui_sandbox.wsl import INSTALL_ARGV, MIN_KERNEL, MIN_VERSION, UPDATE_ARGV, Wsl
 
 REBOOT_REQUIRED = 3010  # ERROR_SUCCESS_REBOOT_REQUIRED
 
@@ -36,6 +36,7 @@ WHY = {
 }
 
 MINIMUM = ".".join(map(str, MIN_VERSION))
+MINIMUM_KERNEL = ".".join(map(str, MIN_KERNEL))
 
 
 def _plan(wsl: Wsl, runner: Runner) -> Plan:
@@ -50,6 +51,9 @@ def _plan(wsl: Wsl, runner: Runner) -> Plan:
         return Plan("update", f"WSL isn't working ('wsl --version' exit {version.returncode})")
     if version.number < MIN_VERSION:
         return Plan("update", f"WSL {version.text} is older than {MINIMUM}")
+    if version.kernel is None or version.kernel < MIN_KERNEL:
+        shown = version.kernel_text or "unknown"
+        return Plan("update", f"WSL kernel {shown} is older than {MINIMUM_KERNEL}")
     return Plan("none", f"WSL {version.text} is ready")
 
 
