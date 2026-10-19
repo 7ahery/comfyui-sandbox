@@ -8,6 +8,10 @@ break the command line or the files the tool writes.
 
 ## [Unreleased]
 
+### Fixed
+
+- Hardening turns the WSL interop handler back off after systemd starts. On WSL 2.5.7 and newer that handler stays enabled even when `/etc/wsl.conf` disables interop, and `verify` then fails the install.
+
 ## [1.0.0] - 2026-10-17
 
 The first public release. It ships:

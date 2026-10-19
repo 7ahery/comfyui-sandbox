@@ -98,7 +98,7 @@ running system:
 |---|---|
 | **Its own WSL2 distro** | A fresh Ubuntu 26.04 used for nothing else, created for this sandbox. Your other distros are left alone (WSL's memory limits are shared, and raised only if you choose to). |
 | **No Windows drives** | `automount` is off: no `C:`, `D:`… inside Linux. The only Windows folder ever mounted is a models folder you chose, and it is mounted `noexec,nosuid,nodev`. |
-| **No Windows programs** | `interop` is off and the Windows `PATH` isn't added, so nothing in the distro can launch `cmd.exe`, `powershell.exe` or any other Windows program. |
+| **No Windows programs** | `interop` is off and the Windows `PATH` isn't added, so nothing in the distro can launch `cmd.exe`, `powershell.exe` or any other Windows program. A boot service turns that handler back off after systemd starts it again. |
 | **Docker Engine, not Docker Desktop** | Installed inside the distro. Nothing on the Windows side, and no `docker.sock` handed to the container. |
 | **A non-root container** | ComfyUI runs as an unprivileged user, with every Linux capability dropped and `no-new-privileges` set (also as the Docker daemon's default). Not privileged, no host networking. |
 | **Only two mounts** | The container sees its own `data/` folder and the models folder. That's it. |

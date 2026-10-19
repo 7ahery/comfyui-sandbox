@@ -87,6 +87,8 @@ def test_install_yes_leaves_a_hardened_distro_and_a_complete_install(install, ru
     harden = wslcalls.script(calls, "harden.sh")
     assert (harden.distro, harden.user) == ("comfy-docker", "root")
     assert harden.env == {"LINUX_USER": "comfy", "MODELS_MODE": "wsl", "MODELS_DIR": "/home/comfy/comfyui-models"}
+    assert "systemd-binfmt.service" in harden.body
+    assert "WSLInterop" in harden.body
 
     terminates = wslcalls.distro_ops(calls, "--terminate")
     assert [t.argv[t.argv.index("--terminate") + 1] for t in terminates] == ["comfy-docker"] * 2

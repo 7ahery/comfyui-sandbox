@@ -3,6 +3,8 @@
 #   windows: MODELS_WIN (e.g. C:\AI\Models) -> mounted at /mnt/models
 #   wsl:     MODELS_DIR (e.g. /home/<user>/comfyui-models) -> plain ext4 folder
 # Effect after the next `wsl --terminate`: no Windows drives, no interop.
+# WSL 2.5.7 and newer registers the Windows-binary handler again after systemd-binfmt
+# starts, so the handler is turned off at each boot as well.
 : "${LINUX_USER:?}" "${MODELS_MODE:?}"
 MNT=/mnt/models
 id "$LINUX_USER" >/dev/null 2>&1 || { echo "[error] user '$LINUX_USER' does not exist" >&2; exit 1; }
@@ -29,6 +31,37 @@ appendWindowsPath = false
 default = ${LINUX_USER}
 CONF
 echo "[ok] /etc/wsl.conf written"
+
+# The handler's status file stays "enabled" across the restart above. A oneshot after
+# systemd-binfmt writes 0 to it, which is what verify.sh treats as interop off.
+install -d /usr/local/lib/comfyui-sandbox /etc/systemd/system/multi-user.target.wants
+cat > /usr/local/lib/comfyui-sandbox/disable-interop.sh <<'EOF'
+#!/bin/sh
+set -eu
+for entry in /proc/sys/fs/binfmt_misc/WSLInterop*; do
+  [ -f "$entry" ] || continue
+  printf 0 > "$entry"
+done
+EOF
+chmod 755 /usr/local/lib/comfyui-sandbox/disable-interop.sh
+cat > /etc/systemd/system/comfyui-sandbox-disable-interop.service <<'EOF'
+[Unit]
+Description=Disable WSL interop
+After=systemd-binfmt.service proc-sys-fs-binfmt_misc.mount
+Before=docker.service
+ConditionPathIsMountPoint=/proc/sys/fs/binfmt_misc
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/lib/comfyui-sandbox/disable-interop.sh
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target
+EOF
+ln -sfn /etc/systemd/system/comfyui-sandbox-disable-interop.service \
+  /etc/systemd/system/multi-user.target.wants/comfyui-sandbox-disable-interop.service
+echo "[ok] interop handler is turned off after systemd-binfmt"
 
 touch /etc/fstab
 sed -i "\#[[:space:]]${MNT}[[:space:]]#d" /etc/fstab   # drop any old models line
