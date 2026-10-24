@@ -17,6 +17,7 @@ import pytest
 from test_reach_versions import STATS
 from test_real_actions import deps
 from test_real_gateway import installed
+from test_verify import ISOLATION_OUTPUT
 
 import scenarios
 import wslcalls
@@ -49,6 +50,7 @@ def comfyui_runs(runner) -> threading.Event:
     """x's ComfyUI: it logs LOG, is on release v0.3.9 with v0.3.10 out, and runs (watch.sh holds)
     until `docker compose stop`. Returns the event set once it has been stopped."""
     stopped = threading.Event()
+    runner.on_script("verify.sh", stdout=ISOLATION_OUTPUT)
     runner.on(*AS, "cat", f"{PROJECT}/.env", stdout='COMFY_PORT=8188\nCOMFY_INSTALL_ARGS="--nvidia --version latest"\n')
     runner.on(*COMPOSE, "ps", "--status", "running", "--quiet", stdout="3f2a9c1d7e44\n")
     runner.on(*GIT, "describe", "--tags", "--exact-match", stdout="v0.3.9\n")
@@ -157,6 +159,25 @@ def test_the_window_shows_comfyuis_versions_its_failed_node_the_update_and_runs_
         stopped.set()
         await r.wait("ComfyUI has been stopped")
         assert "Closing this window stops ComfyUI." not in r.text
+
+    window_on(deps, test)
+
+
+@pytest.mark.parametrize("output, returncode", [("", 0), ("== WSL isolation ==\n[FAIL] interop not disabled\n", 1)])
+def test_an_isolation_warning_stays_visible_while_comfyui_runs(deps, home, runner, output, returncode):
+    installed(home, "x", 8188)
+    stopped = comfyui_runs(runner)
+    runner.on_script("verify.sh", stdout=output, returncode=returncode)
+
+    async def test(r: scenarios.Rec, app: LaunchApp) -> None:
+        await r.wait("Running at")
+        await r.wait("Isolation warning.")
+        assert "Closing this window stops ComfyUI." in r.text
+        assert app.handle is not None
+        assert any("ComfyUI will still start" in line for line in app.handle.progress.lines)
+        stopped.set()
+        await r.wait("ComfyUI has been stopped")
+        assert "Isolation warning." not in r.text
 
     window_on(deps, test)
 

@@ -14,7 +14,7 @@ from typing import Any
 import pytest
 from test_check import Machine
 from test_update_sandbox import ENV, PROJECT, READY, set_env
-from test_verify import own
+from test_verify import ISOLATION_OUTPUT, own
 
 import wslcalls
 from comfyui_sandbox import cli as cli_module
@@ -28,6 +28,7 @@ from comfyui_sandbox.output import Output
 def wsl_present(runner, environ, home):
     Machine().script(runner, environ)
     own(home)
+    runner.on_script("verify.sh", stdout=ISOLATION_OUTPUT)
 
 
 def ran_in_the_distro(runner) -> bool:

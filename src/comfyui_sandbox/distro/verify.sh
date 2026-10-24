@@ -1,5 +1,6 @@
 # comfyui-sandbox verify: the security and health checklist. Runs as ROOT inside the distro, read-only.
 # Env: GPU_MODE (nvidia|cpu, default nvidia), MODELS_DIR (default /mnt/models).
+# ISOLATION_ONLY=1 stops after the WSL isolation section, for the advisory startup check.
 # Output, one line each: "== Section ==", "[PASS|WARN|FAIL|INFO] text", and after a WARN or FAIL
 # an optional "[HINT] what to do". Exit 0 when nothing FAILed, 1 otherwise. The Windows-side reach
 # check is not here (it runs on Windows); the CLI adds it.
@@ -12,19 +13,83 @@ warn(){ echo "[WARN] $1"; hint "$2"; }
 fail(){ echo "[FAIL] $1"; hint "$2"; rc=1; }
 
 echo "== WSL isolation =="
-drives=$(findmnt -rn -o TARGET | grep -E '^/mnt/[a-z]$')
-if [ -z "$drives" ]; then pass "no Windows drive letters mounted"
-else fail "drive mounts present: $drives" "Run 'comfyui-sandbox install' again to re-apply the hardening, then restart the distro."; fi
+if targets=$(findmnt -rn -o TARGET) && [ -n "$targets" ]; then
+  drives=$(printf '%s\n' "$targets" | grep -E '^/mnt/[a-z]$')
+  if [ -z "$drives" ]; then pass "no Windows drive letters mounted"
+  else fail "drive mounts present: $drives" "Run 'comfyui-sandbox install' again to re-apply the hardening, then restart the distro."; fi
+else
+  fail "Windows drive mounts could not be checked" "Run 'comfyui-sandbox verify' again and check that findmnt can list mounts."
+fi
 if sed -n '/^\[automount\]/,/^\[/p' /etc/wsl.conf | grep -qiE '^[[:space:]]*enabled[[:space:]]*=[[:space:]]*false'; then
   pass "automount disabled in /etc/wsl.conf"
 else fail "automount not disabled" "Run 'comfyui-sandbox install' again to rewrite /etc/wsl.conf, then restart the distro."; fi
-if grep -qs '^enabled' /proc/sys/fs/binfmt_misc/WSLInterop*; then
-  fail "WSL interop is enabled" "Run 'comfyui-sandbox install' again to rewrite /etc/wsl.conf, then restart the distro."
-else pass "WSL interop disabled"; fi
+# Check the persisted settings independently of the runtime handler. Reject duplicate
+# sections/keys and malformed lines instead of guessing how WSL will interpret them.
+if awk '
+  { sub(/\r$/, ""); gsub(/^[ \t]+|[ \t]+$/, "") }
+  /^[#;]/ || /^$/ { next }
+  # WSL supports quoted/multiline values and line continuations. Managed config
+  # needs none of them. Reject them anywhere, so a preceding value cannot swallow
+  # an interop section that this conservative parser would otherwise accept.
+  index($0, "\\") || index($0, "\"") || index($0, sprintf("%c", 39)) { bad = 1; next }
+  /^\[[^][]+\]$/ {
+    section = tolower($0)
+    if (section == "[interop]") sections++
+    next
+  }
+  !/^[^=]+=/ { bad = 1; next }
+  section == "[interop]" {
+    split($0, parts, "=")
+    key = tolower(parts[1]); gsub(/^[ \t]+|[ \t]+$/, "", key)
+    value = tolower(parts[2]); gsub(/^[ \t]+|[ \t]+$/, "", value)
+    if (key == "enabled" || key == "appendwindowspath") {
+      seen[key]++
+      if (value != "false" || split($0, fields, "=") != 2) bad = 1
+    }
+  }
+  END { exit (bad || sections != 1 || seen["enabled"] != 1 || seen["appendwindowspath"] != 1) }
+' /etc/wsl.conf 2>/dev/null; then
+  pass "WSL interop disabled in /etc/wsl.conf"
+else
+  fail "WSL interop settings are missing, invalid or not disabled" \
+    "Run 'comfyui-sandbox install' again to rewrite /etc/wsl.conf, then restart the distro."
+fi
+
+# An enabled handler may be shared with another distro. It does not prove that this
+# distro has an interop server. Do not mutate it or mistake a failed/missing-path
+# execution probe for isolation. Until a validated probe exists, fail inconclusive.
+runtime=unknown
+if IFS= read -r status < /proc/sys/fs/binfmt_misc/status; then
+  case "$status" in
+    enabled|disabled)
+      # WSL can shadow the global status file. Inspect the entries even when it
+      # says disabled, and distinguish failed enumeration from an empty registry.
+      if entries=$(find /proc/sys/fs/binfmt_misc -maxdepth 1 -name 'WSLInterop*' -print); then
+        runtime=inactive
+        while IFS= read -r entry; do
+          [ -n "$entry" ] || continue
+          if IFS= read -r status < "$entry" && [ "$status" = disabled ]; then continue; fi
+          runtime=unknown
+          break
+        done <<< "$entries"
+      fi
+      ;;
+  esac
+fi 2>/dev/null
+if [ "$runtime" = inactive ]; then
+  pass "WSL Windows-binary handler inactive"
+else
+  fail "WSL interop runtime isolation could not be verified" \
+    "Keep this sandbox stopped until Windows execution is confirmed blocked. Do not disable the shared binfmt handler, it can affect other distros."
+fi
 while read -r tgt src; do
   case "$tgt" in /mnt/models|/usr/lib/wsl/*|/mnt/wsl*|/tmp/.X11-unix) ;;
     *) warn "unexpected Windows-backed mount: $tgt <- $src" "Check that nothing else mounts a Windows folder into the distro.";; esac
 done < <(findmnt -rn -t 9p,drvfs,virtiofs -o TARGET,SOURCE)
+if [ "${ISOLATION_ONLY:-0}" = 1 ]; then
+  echo "[INFO] WSL isolation check complete"
+  exit "$rc"
+fi
 
 if [ "$MODELS_DIR" = /mnt/models ]; then
   if mountpoint -q /mnt/models; then

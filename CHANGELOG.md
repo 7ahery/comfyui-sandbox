@@ -10,7 +10,8 @@ break the command line or the files the tool writes.
 
 ### Fixed
 
-- Hardening turns the WSL interop handler back off after systemd starts. On WSL 2.5.7 and newer that handler stays enabled even when `/etc/wsl.conf` disables interop, and `verify` then fails the install.
+- Every new ComfyUI run checks sandbox isolation before launching. Failed or inconclusive checks show an advisory warning and ComfyUI still starts. The run window keeps the warning visible while ComfyUI runs.
+- Hardening leaves shared WSL interop handlers alone and removes the boot helper from early PR builds on install or resume. `verify` checks both persisted interop settings and reports unavailable or enabled handler state as unverified isolation, with exit 1, rather than claiming Windows execution is enabled or silently passing an unreadable registry. A reliable execution probe for an enabled shared handler remains pending.
 
 ## [1.0.0] - 2026-10-17
 

@@ -156,6 +156,16 @@ under "Commands that change the sandbox end stopped" also carry `container` and 
 `windows_reach` is `{"ok", "url", "os", "message", "hint"}`. Failures of `run`, `start` and `open` to reach ComfyUI
 from Windows carry it too.
 
+`verify` checks that `/etc/wsl.conf` explicitly disables both interop and Windows `PATH` import.
+It accepts the simple syntax written by hardening and rejects ambiguous duplicate interop
+settings, quoted values and line continuations, including in other sections.
+It reports persisted settings separately from current Windows-binary handler state. An enabled
+shared handler does not establish whether Windows execution is possible in this sandbox. Until a
+validated runtime execution probe is available, an enabled handler or unreadable/unknown registry
+produces a failed check for unverified runtime isolation and exit 1. `install` fails at its verify
+step for the same reason. No handler is modified, and no Windows drive is mounted to perform this
+check. An inactive-handler pass describes the observed state, not future registrations by WSL.
+
 `check`'s `data` (unknown values are `null`):
 
 | Key | Meaning |
@@ -202,6 +212,19 @@ or `--non-interactive`, the newest is taken unasked. With none, exit 1 before an
 `{"backups": []}`.
 
 ## `run`, `start`, `stop` and `open`
+
+Every new `run` performs the read-only WSL isolation section of `verify` before starting the
+container, with a 10-second timeout. Failed, timed-out, unavailable or incomplete checks produce
+an advisory warning on stderr and in the transcript, and startup continues without a prompt.
+The Textual run window keeps an isolation warning visible until ComfyUI stops. `start` and desktop
+shortcuts open that same run window, so they show the same warning there. Opening an already
+running sandbox does not repeat the check. This checks startup only, not later isolation changes.
+
+This advisory startup policy is a temporary exception to the enforcement rule in
+[ADR 0012](adr/0012-safety-rules-are-enforced-in-code.md), until a distro-scoped WSL interop remedy
+is available and validated. It does not change isolation settings or
+shared handlers. Full `verify` and install's verification step still fail with exit 1 when isolation
+fails or cannot be verified. Startup warnings do not change `run`/`start` exit codes or `data` keys.
 
 ([ADR 0010](adr/0010-run-holds-comfyui-in-the-foreground.md))
 

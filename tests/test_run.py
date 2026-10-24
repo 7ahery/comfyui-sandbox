@@ -6,10 +6,11 @@ winapi holds the run-window marker and the browser. Nothing touches a real distr
 
 import pytest
 from test_check import Machine
-from test_verify import own
+from test_verify import ISOLATION_OUTPUT, own
 
 import wslcalls
 from comfyui_sandbox.instance import instance_name, stopping_name
+from comfyui_sandbox.runner import CommandNotFound, CommandTimeout
 
 PROJECT = "/home/comfy/comfyui-docker"
 COMPOSE = ("env", "--chdir", PROJECT, "docker", "compose")
@@ -24,6 +25,7 @@ Killed
 def wsl_present(runner, environ, home):
     Machine().script(runner, environ)
     own(home)
+    runner.on_script("verify.sh", stdout=ISOLATION_OUTPUT)
 
 
 def compose_calls(runner, verb):
@@ -62,6 +64,72 @@ def test_run_starts_waits_opens_the_browser_and_holds_until_the_container_stops(
     assert keepalive.terminated and keepalive.stopped_after > order[-1]
     assert winapi.instances == set()
     assert result.json["data"] == {"distro": "comfy-docker", "url": "http://localhost:8188", "ended": "stopped"}
+
+
+def test_run_checks_isolation_in_the_owned_distro_before_starting_comfyui(cli, runner):
+    result = cli("run", "--json")
+
+    assert result.exit_code == 0, result.stderr
+    check = wslcalls.script(runner.calls, "verify.sh")
+    [up] = compose_calls(runner, ("up", "-d"))
+    assert (check.distro, check.user, check.env) == ("comfy-docker", "root", {"ISOLATION_ONLY": "1"})
+    assert check.call.timeout == 10
+    assert wslcalls.index(runner.calls, check.call) < wslcalls.index(runner.calls, up.call)
+    assert "isolation failed or could not be verified" not in result.stderr
+
+
+@pytest.mark.parametrize(
+    "returncode, output",
+    [
+        (1, "== WSL isolation ==\n[FAIL] WSL interop settings are not disabled\n"),
+        (1, "== WSL isolation ==\n[FAIL] WSL interop runtime isolation could not be verified\n"),
+        (1, ""),
+        (0, ""),
+        (0, "== WSL isolation ==\n[PASS] no Windows drive letters mounted\n"),
+        (0, "not a checklist"),
+        (0, ISOLATION_OUTPUT + "[WARN] unexpected Windows-backed mount\n"),
+    ],
+)
+def test_failed_or_inconclusive_isolation_warns_before_launch_and_still_runs(cli, runner, returncode, output):
+    runner.on_script("verify.sh", returncode=returncode, stdout=output)
+    runner.on(*wslcalls_prefix(), *COMPOSE, "up", stdout="container started\n")
+
+    result = cli("run", "--json")
+
+    assert result.exit_code == 0, result.stderr
+    assert result.stderr.index("Warning: Sandbox isolation") < result.stderr.index("container started")
+    assert "ComfyUI will still start" in result.stderr
+    assert "Run 'comfyui-sandbox verify' for details." in result.stderr
+    assert compose_calls(runner, ("up", "-d"))
+    assert result.json["data"]["ended"] == "stopped"
+
+
+@pytest.mark.parametrize("error", [CommandTimeout, CommandNotFound])
+def test_an_isolation_check_that_cannot_run_warns_and_still_launches(cli, runner, error):
+    def unavailable():
+        raise error("isolation probe unavailable")
+
+    runner.on_script("verify.sh", then=unavailable)
+
+    result = cli("run", "--json")
+
+    assert result.exit_code == 0, result.stderr
+    assert "Warning: Sandbox isolation" in result.stderr
+    assert "isolation probe unavailable" in result.stderr
+    assert compose_calls(runner, ("up", "-d"))
+
+
+def test_cancelling_the_startup_isolation_check_does_not_launch(cli, runner):
+    def cancel():
+        raise KeyboardInterrupt
+
+    runner.on_script("verify.sh", then=cancel)
+
+    result = cli("run")
+
+    assert result.exit_code == 130
+    assert compose_calls(runner, ("up", "-d")) == []
+    assert "ComfyUI will still start" not in result.stderr
 
 
 def test_a_second_run_only_opens_the_browser_and_exits_0(cli, runner, winapi):
@@ -241,7 +309,7 @@ def test_a_container_that_stops_before_it_is_ready_is_reported(cli, runner, wina
     assert result.exit_code == 1
     assert "boom" in result.json["message"]
     assert winapi.opened_urls == []
-    assert [s.script for s in wslcalls.scripts(runner.calls)] == ["wait_ready.sh"]  # never got to watch
+    assert [s.script for s in wslcalls.scripts(runner.calls)] == ["verify.sh", "wait_ready.sh"]  # never got to watch
     assert len(compose_calls(runner, ("stop",))) == 1
 
 
@@ -314,7 +382,7 @@ def test_a_failed_compose_up_stops_and_reports(cli, runner, winapi):
 
     assert result.exit_code == 1
     assert "compose up" in result.json["message"]
-    assert wslcalls.scripts(runner.calls) == []
+    assert [script.script for script in wslcalls.scripts(runner.calls)] == ["verify.sh"]
     assert winapi.instances == set()
 
 
