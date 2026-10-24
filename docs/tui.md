@@ -137,6 +137,9 @@ open. It holds the run-window marker, so a sandbox has at most one.
 - A question `run` asks (its port is taken) is asked in the window. Esc ends `run` as interrupted (130) before
   anything has started.
 - "Closing this window stops ComfyUI." is shown only while it's true.
+- Before each new launch, `run` checks isolation. A failed or inconclusive check warns and still
+  launches, and its standing notice keeps the isolation warning visible alongside the stop notice
+  until ComfyUI stops. The full log has the reasons and the command to run for details.
 - Ctrl+C twice stops ComfyUI through `run`'s own cleanup (130). Once ComfyUI has stopped, however it stopped, the
   window closes on its own.
 - After a failure the window stays open on `run`'s message and transcript path until Enter or Esc closes it.

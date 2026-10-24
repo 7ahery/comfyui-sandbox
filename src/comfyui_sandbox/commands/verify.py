@@ -71,7 +71,7 @@ def run_verify(session, install: Install, wsl=None) -> dict[str, Any]:
     Raises CliError (exit 1, with the same data) when any check failed."""
     out, deps = session.out, session.deps
     wsl = wsl or session.wsl()
-    env = {"GPU_MODE": install.gpu.mode, "MODELS_DIR": models_mount(install)}
+    env = {"GPU_MODE": install.gpu.mode, "MODELS_DIR": models_mount(install), "ISOLATION_ONLY": "0"}
     done = wsl.run_script(install.distro, ROOT, "verify.sh", env)
     checks = parse(done.out())
     shown = None

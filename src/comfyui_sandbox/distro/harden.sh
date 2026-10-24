@@ -30,6 +30,13 @@ default = ${LINUX_USER}
 CONF
 echo "[ok] /etc/wsl.conf written"
 
+# Remove the helper from early PR builds, including on resume. Never write to the
+# binfmt registry: supported WSL kernels can share it with unrelated distros (ADR 0012).
+rm -f /etc/systemd/system/multi-user.target.wants/comfyui-sandbox-disable-interop.service \
+  /etc/systemd/system/comfyui-sandbox-disable-interop.service \
+  /usr/local/lib/comfyui-sandbox/disable-interop.sh
+systemctl daemon-reload
+
 touch /etc/fstab
 sed -i "\#[[:space:]]${MNT}[[:space:]]#d" /etc/fstab   # drop any old models line
 

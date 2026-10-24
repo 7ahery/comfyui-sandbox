@@ -26,7 +26,7 @@ import typer
 
 from comfyui_sandbox import ports, reach, steps
 from comfyui_sandbox.cli_command import PROG
-from comfyui_sandbox.commands import update_comfyui
+from comfyui_sandbox.commands import update_comfyui, verify
 from comfyui_sandbox.container import CONTAINER
 from comfyui_sandbox.errors import CliError, NotReady
 from comfyui_sandbox.front_end import Closed
@@ -37,7 +37,7 @@ from comfyui_sandbox.output import Outcome, PlannedStep
 from comfyui_sandbox.runner import Process
 from comfyui_sandbox.state import Install
 from comfyui_sandbox.steps import compose_argv, project_path
-from comfyui_sandbox.wsl import CALL_TIMEOUT
+from comfyui_sandbox.wsl import CALL_TIMEOUT, ROOT
 
 READY_MINUTES = 10
 READY_INTERVAL = 10
@@ -57,6 +57,8 @@ PLAN = (STARTING, WAITING, REACHING)
 # The stop notice (Output.notice): true from the moment the console-close handler is set until the
 # cleanup starts. The plain window says it in its own words once ComfyUI is up (CLOSE_TO_STOP).
 STOP_NOTICE = "Closing this window stops ComfyUI."
+ISOLATION_NOTICE = f"Isolation warning. {STOP_NOTICE}"
+ISOLATION_TIMEOUT = 10
 CLOSE_TO_STOP = "Close this window to stop ComfyUI."
 
 # ComfyUI's log since this start of its container, stdout and stderr together (ComfyUI logs mostly
@@ -139,6 +141,7 @@ class RunWindow:
     def start_container(self) -> None:
         self.keepalive.start(self.install.distro)
         self.out.step(STARTING.title)
+        self.warn_about_isolation()
         done = self._compose("up", "-d", on_line=self.out.progress)
         if done.returncode != 0:
             raise CliError(f"docker compose up -d failed (exit {done.returncode}), the messages above say why.")
@@ -146,6 +149,35 @@ class RunWindow:
             self.log_reader = self.wsl.follow_command(
                 self.install.distro, self.install.linux_user, ["sh", "-c", FOLLOW_LOG], self._comfyui_line
             )
+
+    def warn_about_isolation(self) -> None:
+        """Advisory at every new launch, with the same read-only checks as verify.
+
+        Startup deliberately continues on failed or inconclusive isolation, per the
+        startup warning policy in docs/scripting.md, "`run`, `start`, `stop` and `open`".
+        Full verify/install retain their failure behavior.
+        """
+        try:
+            done = self.wsl.run_script(
+                self.install.distro, ROOT, "verify.sh", {"ISOLATION_ONLY": "1"}, timeout=ISOLATION_TIMEOUT
+            )
+        except CliError as exc:
+            reasons = [str(exc)]
+        else:
+            checks = [check for check in verify.parse(done.out()) if check.section == "WSL isolation"]
+            reasons = [check.message for check in checks if check.status in ("fail", "warn")]
+            complete = any(
+                check.status == "info" and check.message == "WSL isolation check complete" for check in checks
+            )
+            if done.returncode == 0 and complete and not reasons:
+                return
+            if not reasons:
+                reasons = ["The isolation check did not complete successfully."]
+        self.out.notice(ISOLATION_NOTICE)
+        self.out.warn("Sandbox isolation failed or could not be verified. ComfyUI will still start.")
+        for reason in reasons:
+            self.out.info(reason)
+        self.out.info(f"Run '{steps.command_for('verify', self.session, self.install.distro)}' for details.")
 
     def _comfyui_line(self, line: str) -> None:
         """A line of ComfyUI's log, on the reader's thread, without its colours: the window draws

@@ -12,6 +12,15 @@ from test_install import install, installs_json, machine
 import wslcalls
 from comfyui_sandbox.winapi import PortOwner
 
+ISOLATION_OUTPUT = """\
+== WSL isolation ==
+[PASS] no Windows drive letters mounted
+[PASS] automount disabled in /etc/wsl.conf
+[PASS] WSL interop disabled in /etc/wsl.conf
+[PASS] WSL Windows-binary handler inactive
+[INFO] WSL isolation check complete
+"""
+
 PASS_OUTPUT = """\
 == WSL isolation ==
 [PASS] no Windows drive letters mounted
@@ -67,7 +76,7 @@ def test_a_pass_reports_every_check_in_human_and_json_output(cli, runner, home):
     assert result.exit_code == 0, result.stderr
     run = wslcalls.script(runner.calls, "verify.sh")
     assert (run.distro, run.user) == ("comfy-docker", "root")
-    assert run.env == {"GPU_MODE": "nvidia", "MODELS_DIR": "/home/comfy/models"}
+    assert run.env == {"GPU_MODE": "nvidia", "MODELS_DIR": "/home/comfy/models", "ISOLATION_ONLY": "0"}
     data = result.json["data"]
     assert data["distro"] == "comfy-docker"
     assert data["counts"] == {"pass": 5, "warn": 1, "fail": 0}
