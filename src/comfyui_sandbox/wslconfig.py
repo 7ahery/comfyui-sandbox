@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import re
 from dataclasses import asdict, dataclass
+from pathlib import Path
 
 
 @dataclass(frozen=True)
@@ -69,6 +70,28 @@ def decode(raw: bytes) -> str:
     else:
         text = raw.decode("utf-8-sig", errors="replace")
     return text.replace("\r\n", "\n").replace("\r", "\n")
+
+
+def has_custom_kernel(home: Path) -> bool:
+    """Whether the injected home selects a custom kernel, without exposing its path.
+
+    Read errors propagate: a caller must not assume the bundled kernel is selected when
+    the configuration cannot be read. WSL accepts UTF-8 and UTF-16 configuration files.
+    """
+    try:
+        text = decode((home / ".wslconfig").read_bytes())
+    except FileNotFoundError:
+        return False
+    section = None
+    for raw in text.splitlines():
+        line = raw.split("#", 1)[0].split(";", 1)[0].strip()
+        if line.startswith("[") and line.endswith("]"):
+            section = line[1:-1].strip().lower()
+        elif section == "wsl2" and "=" in line:
+            key, value = (part.strip() for part in line.split("=", 1))
+            if key.lower() == "kernel" and value.strip('"').strip():
+                return True
+    return False
 
 
 def merge(raw: bytes | None, memory_gb: int, processors: int, swap_gb: int) -> bytes:

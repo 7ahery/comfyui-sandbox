@@ -140,3 +140,24 @@ def test_a_call_that_never_returns_ends_in_an_error_naming_the_program(cli, runn
 
     assert result.exit_code != 0
     assert "Timed out" in result.stderr + result.stdout
+
+
+def test_a_wsl_service_error_keeps_diagnostics_and_adds_a_conditional_update_hint():
+    from comfyui_sandbox.errors import CliError
+    from comfyui_sandbox.runner import Completed
+    from comfyui_sandbox.steps import ensure_ok
+
+    done = Completed(
+        ("wsl.exe",),
+        4294967295,
+        b"Catastrophic failure\nError code: Wsl/Service/E_UNEXPECTED\n",
+        b"",
+    )
+
+    with pytest.raises(CliError, match="WSL reported") as raised:
+        ensure_ok(done, "Creating the Linux user")
+
+    assert "Creating the Linux user failed (exit 4294967295)" in str(raised.value)
+    assert "Wsl/Service/E_UNEXPECTED" in str(raised.value)
+    assert "If it reports an old WSL" in str(raised.value)
+    assert "comfyui-sandbox prereqs" in str(raised.value)

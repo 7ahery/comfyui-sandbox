@@ -10,12 +10,12 @@ INSTALL = ("wsl.exe", "--install", "--no-distribution")
 UPDATE = ("wsl.exe", "--update")
 
 
-def install_wsl(environ, runner, version="2.6.1.0"):
-    """Make WSL count as installed, answering `wsl --version` with `version`."""
+def install_wsl(environ, runner, version="2.6.1.0", kernel="6.6.87.2-1"):
+    """Make WSL count as installed, answering `wsl --version` with `version` and `kernel`."""
     exe = Path(environ["ProgramFiles"]) / "WSL" / "wsl.exe"
     exe.parent.mkdir(parents=True, exist_ok=True)
     exe.write_bytes(b"")
-    runner.on("wsl.exe", "--version", stdout=f"WSL version: {version}\nKernel version: 6.6.87.2-1\n")
+    runner.on("wsl.exe", "--version", stdout=f"WSL version: {version}\nKernel version: {kernel}\n")
 
 
 def test_missing_wsl_is_installed_elevated_and_needs_a_reboot(cli, winapi, home):
@@ -45,6 +45,17 @@ def test_old_wsl_is_updated_elevated_without_a_reboot(cli, winapi, runner, envir
     assert doc["data"]["action"] == "update"
     assert doc["data"]["reboot_needed"] is False
     assert "wsl.exe --update" in Path(doc["log"]).read_text(encoding="utf-8")
+
+
+def test_old_kernel_is_updated_even_when_the_wsl_version_is_new_enough(cli, winapi, runner, environ):
+    install_wsl(environ, runner, version="2.4.10.0", kernel="5.15.167.4-1")
+
+    result = cli("prereqs", "--json", "--yes")
+
+    assert result.exit_code == 0
+    assert winapi.elevated == [UPDATE]
+    assert result.json["data"]["action"] == "update"
+    assert "5.15.167.4" in result.stderr
 
 
 def test_ready_wsl_does_nothing(cli, winapi, runner, environ):

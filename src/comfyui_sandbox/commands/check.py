@@ -8,6 +8,7 @@ from __future__ import annotations
 import io
 import re
 from dataclasses import dataclass, field
+from pathlib import Path
 from typing import Any
 
 import typer
@@ -17,7 +18,7 @@ from comfyui_sandbox.errors import CliError, ExitCode
 from comfyui_sandbox.hostinfo import HostFacts
 from comfyui_sandbox.output import Outcome, Output
 from comfyui_sandbox.runner import CommandNotFound, CommandTimeout, Runner
-from comfyui_sandbox.wsl import MIN_VERSION, Version, Wsl
+from comfyui_sandbox.wsl import MIN_KERNEL, MIN_VERSION, Version, Wsl, kernel_warning
 
 UBUNTU = "Ubuntu-26.04"
 
@@ -231,11 +232,12 @@ def _virtualization(report: Report, host: HostFacts) -> None:
         report.fail(ExitCode.WSL_NOT_READY, f"Virtual Machine Platform is off. {PREREQS}, then reboot.")
 
 
-def _wsl(report: Report, wsl: Wsl) -> None:
+def _wsl(report: Report, wsl: Wsl, home: Path) -> None:
     report.section("WSL")
     info: dict[str, Any] = {
         "installed": wsl.installed(),
         "version": None,
+        "kernel": None,
         "ubuntu_26_04_available": None,
         "distros": [],
     }
@@ -264,7 +266,21 @@ def _wsl(report: Report, wsl: Wsl) -> None:
             f"WSL {version.text} is too old: {minimum} or newer is required. {PREREQS} (it runs 'wsl --update').",
         )
         return
+    info["kernel"] = version.kernel_text
+    minimum_kernel = ".".join(map(str, MIN_KERNEL))
+    warning = kernel_warning(version, home)
+    if warning:
+        report.warn(warning)
+    elif version.kernel is not None and version.kernel < MIN_KERNEL:
+        report.fail(
+            ExitCode.WSL_NOT_READY,
+            f"WSL's bundled kernel {version.kernel_text} is older than this tool's supported minimum. "
+            f"{minimum_kernel} or newer is required. {PREREQS} (it runs 'wsl --update').",
+        )
+        return
     report.ok(version.first_line)
+    if not warning:
+        report.ok(f"WSL bundled kernel {version.kernel_text}")
     info["ubuntu_26_04_available"] = wsl.online_has(UBUNTU)
     if info["ubuntu_26_04_available"]:
         report.ok(f"{UBUNTU} available")
@@ -316,7 +332,7 @@ def inspect(deps, out: Output) -> Report:
     host = hostinfo.probe(deps.runner)
     _gpu(report, deps.runner, host)
     _virtualization(report, host)
-    _wsl(report, Wsl(deps.runner, deps.environ))
+    _wsl(report, Wsl(deps.runner, deps.environ), deps.home)
     _defaults(report, host, deps.environ)
     return report
 

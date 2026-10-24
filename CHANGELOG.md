@@ -8,6 +8,11 @@ break the command line or the files the tool writes.
 
 ## [Unreleased]
 
+### Fixed
+
+- `check` rejects a known bundled WSL kernel older than the supported minimum of 6.6, and `prereqs` offers an update. Kernel detection works with localized output. Unknown versions and custom kernels report compatibility as unverified without repeatedly updating WSL or changing the custom setting.
+- A step that fails with `Wsl/Service/E_UNEXPECTED` keeps its exit code and original error detail, and adds a conditional hint to check WSL and update it when needed.
+
 ## [1.0.0] - 2026-10-17
 
 The first public release. It ships:
