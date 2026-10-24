@@ -208,13 +208,13 @@ def test_wsl_kernel_older_than_6_6_exits_7_even_when_the_package_is_new_enough(c
     assert wsl["kernel"] == "5.15.167.4"
 
 
-def test_wsl_that_reports_no_kernel_exits_7(check, machine):
+def test_wsl_that_reports_no_kernel_warns_without_blocking(check, machine):
     machine.wsl_version = "WSL version: 2.6.1.0\n"
 
     result = check()
 
-    assert result.exit_code == 7
-    assert "kernel unknown" in result.stderr
+    assert result.exit_code == 0
+    assert "not verified" in result.stderr
     assert result.json["data"]["wsl"]["kernel"] is None
 
 

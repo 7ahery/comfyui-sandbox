@@ -40,8 +40,8 @@ STOP_COMFYUI = PlannedStep("Stop ComfyUI", 10)
 START_FOR_STEP = PlannedStep("Start ComfyUI for this step", 20)
 
 
-# wsl.exe died before the distro ran the command. Exit 4294967295 is -1. Blaming the step
-# (for example "Creating the Linux user") hides that, and `prereqs` is what updates WSL.
+# This generic WSL service error can accompany startup failures. Keep diagnostics and
+# offer a conditional update hint, rather than claiming an old kernel caused the failure.
 WSL_UNEXPECTED = "Wsl/Service/E_UNEXPECTED"
 
 
@@ -49,14 +49,16 @@ def ensure_ok(done: Completed, what: str) -> None:
     """Raise a CliError naming `what` and the last output line when the command failed."""
     if done.returncode != 0:
         text = done.out() + "\n" + done.err()
-        if WSL_UNEXPECTED in text:
-            raise CliError(
-                f"{what} failed because WSL could not start the distro ({WSL_UNEXPECTED}). "
-                "Run 'comfyui-sandbox prereqs' to update WSL, then retry."
-            )
         lines = [line for line in text.splitlines() if line.strip()]
         said = f": {lines[-1].strip()}" if lines else ""
-        raise CliError(f"{what} failed (exit {done.returncode}){said}")
+        message = f"{what} failed (exit {done.returncode}){said}"
+        if WSL_UNEXPECTED in text:
+            message += (
+                f". WSL reported {WSL_UNEXPECTED}. Run 'comfyui-sandbox check'. "
+                "If it reports an old WSL package or bundled kernel, run 'comfyui-sandbox prereqs', then retry. "
+                "If checks pass, inspect the WSL error and any custom kernel setting."
+            )
+        raise CliError(message)
 
 
 def project_path(user: str) -> str:

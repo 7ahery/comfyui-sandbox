@@ -54,10 +54,15 @@ Docker or the NVIDIA Container Toolkit.
 **You need:**
 
 - Windows with hardware virtualization on (Linux support is on the roadmap),
-- WSL 2.4.4 or newer, with kernel 6.6 or newer (`comfyui-sandbox` installs or updates it for you),
+- WSL 2.4.4 or newer, with kernel 6.6 or newer (`comfyui-sandbox` installs or updates WSL's bundled kernel for you),
 - an NVIDIA GPU with a current Windows driver
  (AMD and Intel GPUs are not supported yet),
 - about 30 GB free for ComfyUI and PyTorch, plus room for your models.
+
+`check` reads the bundled kernel version without starting a distro. If you select a custom kernel in
+`.wslconfig`, or its version cannot be determined, it warns that kernel compatibility is not verified.
+Confirm that your custom kernel is 6.6 or newer. `prereqs` does not replace a custom kernel or update WSL
+solely because a kernel version is unknown.
 
 **1. Install [uv](https://docs.astral.sh/uv/)**, in PowerShell:
 

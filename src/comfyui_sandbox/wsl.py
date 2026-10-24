@@ -26,6 +26,7 @@ from dataclasses import dataclass
 from importlib import resources
 from pathlib import Path
 
+from comfyui_sandbox import wslconfig
 from comfyui_sandbox.errors import CliError, ExitCode
 from comfyui_sandbox.logs import Transcript
 from comfyui_sandbox.runner import Completed, Process, Runner
@@ -33,9 +34,9 @@ from comfyui_sandbox.runner import Completed, Process, Runner
 WSL = "wsl.exe"
 ENV = {"WSL_UTF8": "1"}
 # Ubuntu 26.04 ships only in the .wsl format, which (with `wsl --install --name/--location`)
-# needs WSL 2.4.4 or newer. That floor is not enough to boot the image: WSL 2.4.10 still
-# ships kernel 5.15, installs the distro, and then dies on the first command inside it
-# (Wsl/Service/E_UNEXPECTED). Kernel 6.6 is the oldest this tool treats as able to boot it.
+# needs WSL 2.4.4 or newer. An Ubuntu startup failure was reported with WSL 2.4.10
+# and its bundled 5.15 kernel. Require bundled kernel 6.6 as this tool's compatibility
+# floor, without claiming E_UNEXPECTED establishes the cause or inspecting custom kernels.
 MIN_VERSION = (2, 4, 4)
 MIN_KERNEL = (6, 6)
 TIMEOUT = 60
@@ -67,7 +68,10 @@ class ScriptNotFound(CliError):
 
 @dataclass(frozen=True)
 class Version:
-    """`wsl --version`: `number` and `kernel` are None when WSL didn't answer with one."""
+    """`wsl --version`: package and bundled kernel, not a configured custom kernel.
+
+    `number` and `kernel` are None when WSL didn't answer with one.
+    """
 
     returncode: int
     first_line: str
@@ -105,15 +109,41 @@ def _check_env(env: Mapping[str, str]) -> dict[str, str]:
 
 
 def _kernel(text: str) -> tuple[int, ...] | None:
-    """The kernel from `wsl --version`. The line is localized ("Kernel version:",
-    "Kernelversion:"); the number is what matters. The trailing "-1" is a package
-    revision, not part of the version."""
-    for line in text.splitlines():
-        if "kernel" not in line.lower():
-            continue
-        found = KERNEL_NUMBER.search(line)
-        if found:
-            return tuple(int(part) for part in found.groups() if part is not None)
+    """The second slot in WSL's localized MessagePackageVersions resource.
+
+    Match its numeric value after the colon, never another component's version.
+    The trailing "-1" is a package revision, not part of the kernel version.
+    """
+    lines = text.strip().splitlines()
+    if len(lines) < 2:
+        return None
+    _, separator, value = lines[1].replace("：", ":").partition(":")
+    found = KERNEL_NUMBER.fullmatch(value.strip().split("-", 1)[0]) if separator else None
+    return tuple(int(part) for part in found.groups() if part is not None) if found else None
+
+
+def kernel_warning(version: Version, home: Path) -> str | None:
+    """Why the bundled-kernel check cannot establish compatibility, shared by both commands.
+
+    Detection stays read-only: do not start any distro or update a package to resolve
+    unknown output or the user's custom-kernel override.
+    """
+    minimum = ".".join(map(str, MIN_KERNEL))
+    try:
+        custom = wslconfig.has_custom_kernel(home)
+    except OSError:
+        return "Could not read .wslconfig. WSL kernel compatibility is not verified. Check the file's permissions."
+    if custom:
+        return (
+            "A custom WSL kernel is configured in .wslconfig. Kernel compatibility is not verified. "
+            f"Use kernel {minimum} or newer, or remove the override to use WSL's bundled kernel. "
+            "Updating WSL does not replace a custom kernel."
+        )
+    if version.kernel is None:
+        return (
+            "WSL did not report a readable bundled kernel version. Kernel compatibility is not verified. "
+            f"Check 'wsl --version' and confirm kernel {minimum} or newer."
+        )
     return None
 
 

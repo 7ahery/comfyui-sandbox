@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import subprocess
 from dataclasses import dataclass
+from pathlib import Path
 
 import typer
 
@@ -19,7 +20,7 @@ from comfyui_sandbox.errors import AnswerMissing, CliError, ExitCode
 from comfyui_sandbox.output import Outcome
 from comfyui_sandbox.runner import Runner
 from comfyui_sandbox.winapi import ElevationDeclined
-from comfyui_sandbox.wsl import INSTALL_ARGV, MIN_KERNEL, MIN_VERSION, UPDATE_ARGV, Wsl
+from comfyui_sandbox.wsl import INSTALL_ARGV, MIN_KERNEL, MIN_VERSION, UPDATE_ARGV, Wsl, kernel_warning
 
 REBOOT_REQUIRED = 3010  # ERROR_SUCCESS_REBOOT_REQUIRED
 
@@ -39,7 +40,7 @@ MINIMUM = ".".join(map(str, MIN_VERSION))
 MINIMUM_KERNEL = ".".join(map(str, MIN_KERNEL))
 
 
-def _plan(wsl: Wsl, runner: Runner) -> Plan:
+def _plan(wsl: Wsl, runner: Runner, home: Path) -> Plan:
     """The same WSL tests as `check`: missing WSL or Virtual Machine Platform means install
     (it turns the feature on); broken or too old WSL means update."""
     if not wsl.installed():
@@ -51,9 +52,11 @@ def _plan(wsl: Wsl, runner: Runner) -> Plan:
         return Plan("update", f"WSL isn't working ('wsl --version' exit {version.returncode})")
     if version.number < MIN_VERSION:
         return Plan("update", f"WSL {version.text} is older than {MINIMUM}")
-    if version.kernel is None or version.kernel < MIN_KERNEL:
-        shown = version.kernel_text or "unknown"
-        return Plan("update", f"WSL kernel {shown} is older than {MINIMUM_KERNEL}")
+    warning = kernel_warning(version, home)
+    if warning:
+        return Plan("none", warning)
+    if version.kernel is not None and version.kernel < MIN_KERNEL:
+        return Plan("update", f"WSL bundled kernel {version.kernel_text} is older than {MINIMUM_KERNEL}")
     return Plan("none", f"WSL {version.text} is ready")
 
 
@@ -66,11 +69,11 @@ def register(app: typer.Typer) -> None:
         if deps.platform != "win32":
             raise CliError(SUMMARY[ExitCode.UNSUPPORTED_HOST], ExitCode.UNSUPPORTED_HOST)
         log = session.transcript()
-        plan = _plan(session.wsl(), deps.runner)
+        plan = _plan(session.wsl(), deps.runner, deps.home)
         log.info(plan.reason)
-        session.out.info(plan.reason + ".")
+        session.out.info(plan.reason.rstrip(".") + ".")
         if plan.action == "none":
-            return Outcome("WSL is ready, nothing to do.", {"action": "none", "reboot_needed": False})
+            return Outcome(plan.reason.rstrip(".") + ".", {"action": "none", "reboot_needed": False})
         argv = list(INSTALL_ARGV if plan.action == "install" else UPDATE_ARGV)
         command = subprocess.list2cmdline(argv)
         question = f"Run '{command}' as administrator? (Windows will ask you to approve it)"

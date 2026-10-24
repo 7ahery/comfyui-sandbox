@@ -10,8 +10,8 @@ break the command line or the files the tool writes.
 
 ### Fixed
 
-- `check` and `prereqs` reject a WSL kernel older than 6.6. WSL 2.4.10 can install Ubuntu 26.04 and then fail to start the distro. `prereqs` updates WSL.
-- A step that dies with `Wsl/Service/E_UNEXPECTED` says the distro did not start and to run `prereqs`, instead of blaming that step's own work.
+- `check` rejects a known bundled WSL kernel older than the supported minimum of 6.6, and `prereqs` offers an update. Kernel detection works with localized output. Unknown versions and custom kernels report compatibility as unverified without repeatedly updating WSL or changing the custom setting.
+- A step that fails with `Wsl/Service/E_UNEXPECTED` keeps its exit code and original error detail, and adds a conditional hint to check WSL and update it when needed.
 
 ## [1.0.0] - 2026-10-17
 
