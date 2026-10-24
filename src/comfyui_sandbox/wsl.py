@@ -26,6 +26,7 @@ from dataclasses import dataclass
 from importlib import resources
 from pathlib import Path
 
+from comfyui_sandbox import wslconfig
 from comfyui_sandbox.errors import CliError, ExitCode
 from comfyui_sandbox.logs import Transcript
 from comfyui_sandbox.runner import Completed, Process, Runner
@@ -33,8 +34,11 @@ from comfyui_sandbox.runner import Completed, Process, Runner
 WSL = "wsl.exe"
 ENV = {"WSL_UTF8": "1"}
 # Ubuntu 26.04 ships only in the .wsl format, which (with `wsl --install --name/--location`)
-# needs WSL 2.4.4 or newer.
+# needs WSL 2.4.4 or newer. An Ubuntu startup failure was reported with WSL 2.4.10
+# and its bundled 5.15 kernel. Require bundled kernel 6.6 as this tool's compatibility
+# floor, without claiming E_UNEXPECTED establishes the cause or inspecting custom kernels.
 MIN_VERSION = (2, 4, 4)
+MIN_KERNEL = (6, 6)
 TIMEOUT = 60
 # A call in the distro that passes no timeout gets this one, so a hung Docker can't hang the CLI.
 # Long steps pass their own; pass `timeout=None` only for a call meant to run until the user stops it.
@@ -44,6 +48,7 @@ UBUNTU = "Ubuntu-26.04"
 # `wsl --install` downloads the image: allow for a slow connection.
 INSTALL_TIMEOUT = 3600
 ENV_NAME = re.compile(r"[A-Za-z_][A-Za-z0-9_]*")
+KERNEL_NUMBER = re.compile(r"(\d+)\.(\d+)\.(\d+)(?:\.(\d+))?")
 # Run elevated by `prereqs` (through winapi.run_elevated, not the Runner). Both work with
 # only the Windows inbox stub, which is all there is before WSL is installed.
 INSTALL_ARGV = (WSL, "--install", "--no-distribution")
@@ -63,15 +68,23 @@ class ScriptNotFound(CliError):
 
 @dataclass(frozen=True)
 class Version:
-    """`wsl --version`: `number` is None when WSL didn't answer with one."""
+    """`wsl --version`: package and bundled kernel, not a configured custom kernel.
+
+    `number` and `kernel` are None when WSL didn't answer with one.
+    """
 
     returncode: int
     first_line: str
     number: tuple[int, ...] | None
+    kernel: tuple[int, ...] | None = None
 
     @property
     def text(self) -> str | None:
         return ".".join(map(str, self.number)) if self.number else None
+
+    @property
+    def kernel_text(self) -> str | None:
+        return ".".join(map(str, self.kernel)) if self.kernel else None
 
 
 def script_names() -> list[str]:
@@ -93,6 +106,45 @@ def _check_env(env: Mapping[str, str]) -> dict[str, str]:
         if not ENV_NAME.fullmatch(key):
             raise ValueError(f"bad environment variable name: {key!r}")
     return {k: str(v) for k, v in env.items()}
+
+
+def _kernel(text: str) -> tuple[int, ...] | None:
+    """The second slot in WSL's localized MessagePackageVersions resource.
+
+    Match its numeric value after the colon, never another component's version.
+    The trailing "-1" is a package revision, not part of the kernel version.
+    """
+    lines = text.strip().splitlines()
+    if len(lines) < 2:
+        return None
+    _, separator, value = lines[1].replace("：", ":").partition(":")
+    found = KERNEL_NUMBER.fullmatch(value.strip().split("-", 1)[0]) if separator else None
+    return tuple(int(part) for part in found.groups() if part is not None) if found else None
+
+
+def kernel_warning(version: Version, home: Path) -> str | None:
+    """Why the bundled-kernel check cannot establish compatibility, shared by both commands.
+
+    Detection stays read-only: do not start any distro or update a package to resolve
+    unknown output or the user's custom-kernel override.
+    """
+    minimum = ".".join(map(str, MIN_KERNEL))
+    try:
+        custom = wslconfig.has_custom_kernel(home)
+    except OSError:
+        return "Could not read .wslconfig. WSL kernel compatibility is not verified. Check the file's permissions."
+    if custom:
+        return (
+            "A custom WSL kernel is configured in .wslconfig. Kernel compatibility is not verified. "
+            f"Use kernel {minimum} or newer, or remove the override to use WSL's bundled kernel. "
+            "Updating WSL does not replace a custom kernel."
+        )
+    if version.kernel is None:
+        return (
+            "WSL did not report a readable bundled kernel version. Kernel compatibility is not verified. "
+            f"Check 'wsl --version' and confirm kernel {minimum} or newer."
+        )
+    return None
 
 
 def script_stdin(name: str, text: str, env: Mapping[str, str]) -> bytes:
@@ -233,8 +285,9 @@ class Wsl:
         first = lines[0].strip() if lines else ""
         # The first line is localized ("WSL version: 2.6.1.0", "WSL-Version: ..."): match the number.
         found = re.search(r"(\d+)\.(\d+)\.(\d+)(?:\.(\d+))?", first)
-        number = tuple(int(g) for g in found.groups() if g is not None) if found else None
-        return Version(done.returncode, first, number if done.returncode == 0 else None)
+        answered = done.returncode == 0
+        number = tuple(int(g) for g in found.groups() if g is not None) if found and answered else None
+        return Version(done.returncode, first, number, _kernel(done.out()) if answered else None)
 
     def _names(self, *args: str) -> list[str]:
         done = self._run(*args)

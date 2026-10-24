@@ -112,6 +112,11 @@ command's `--help` lists its flags; the install questions' values and defaults a
   under `--non-interactive` it exits 9; without an unfinished install it exits 2.
 - `prereqs` asks before it elevates: `--yes` approves, `--non-interactive` without it exits 9, and declining (or
   declining UAC) is exit 1.
+- `check` requires bundled WSL kernel 6.6 or newer when its version is known and no custom kernel is selected.
+  An unreadable kernel version or `.wslconfig`, or a custom `kernel=` override, produces a warning that kernel
+  compatibility is not verified, rather than failing this check. `prereqs` does not update WSL solely for these
+  cases and returns `action: "none"` with that explanation, without claiming the kernel is ready. Other detected
+  requirements (such as an old WSL package) can still fail `check` or require installation/update.
 - `config` with no flags shows a menu at a terminal; under `--yes` or `--non-interactive` it exits 2. A value it
   refuses, such as one that would weaken the isolation
   ([ADR 0012](adr/0012-safety-rules-are-enforced-in-code.md)), exits 2 with `flag` set, and nothing is changed.
@@ -179,7 +184,7 @@ check. An inactive-handler pass describes the observed state, not future registr
 | `gpu.cuda_version_suggested` | `"12.8"` for a Blackwell card whose driver supports it, else null. |
 | `gpu.windows_gpus` | Exit 3: the GPUs Windows reports. Exit 6: the NVIDIA devices. |
 | `virtualization` | `{"hypervisor", "firmware_enabled", "virtual_machine_platform": "enabled"\|"disabled"\|"absent"}` |
-| `wsl` | `{"installed", "version", "ubuntu_26_04_available", "distros"}` |
+| `wsl` | `{"installed", "version", "kernel", "ubuntu_26_04_available", "distros"}`. `kernel` is the **bundled** kernel from `wsl --version`, such as `"6.6.87.2"`, or null when unavailable. It does not identify a configured custom kernel or prove the version currently running. |
 | `drives` | `[{"drive": "C:", "free_gb"}]`, fixed local drives. |
 | `c_free_gb`, `user_profile`, `win_user_suggested` | Free space on C:, `%USERPROFILE%`, and the lowercased `%USERNAME%` when it is a valid Linux user name. |
 | `wsl_limits` | `{"host_ram_gb", "host_cpus", "memory_gb", "memory_low_gb", "processors", "swap_gb"}`, the suggested `.wslconfig` limits. |
