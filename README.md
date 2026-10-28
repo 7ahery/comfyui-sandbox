@@ -59,35 +59,11 @@ Docker or the NVIDIA Container Toolkit.
  (AMD and Intel GPUs are not supported yet),
 - about 30 GB free for ComfyUI and PyTorch, plus room for your models.
 
-`check` reads the bundled kernel version without starting a distro. If you select a custom kernel in
-`.wslconfig`, or its version cannot be determined, it warns that kernel compatibility is not verified.
-Confirm that your custom kernel is 6.6 or newer. `prereqs` does not replace a custom kernel or update WSL
-solely because a kernel version is unknown.
-
 **1. Install `comfyui-sandbox`**, in PowerShell:
 
 ```powershell
 irm https://raw.githubusercontent.com/7ahery/comfyui-sandbox/main/install.ps1 | iex
 ```
-
-It installs [uv](https://docs.astral.sh/uv/) with winget if you don't have it, then installs
-`comfyui-sandbox` with uv. [Read the script](install.ps1) first if you like, or run the steps
-yourself:
-
-<details>
-<summary><b>Install manually</b></summary>
-
-```powershell
-winget install astral-sh.uv
-```
-
-Open a new terminal window, so `uv` is on your PATH, then:
-
-```powershell
-uv tool install git+https://github.com/7ahery/comfyui-sandbox@v1.0.0
-```
-
-</details>
 
 **2. Run ComfyUI Sandbox,** in PowerShell:
 
