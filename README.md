@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="assets/banner-1.svg" alt="ComfyUI Sandbox: the ComfyUI pixel logo resolving out of latent noise, with the tagline ComfyUI, sandboxed. Isolated in WSL 2, served on 127.0.0.1" width="100%">
+  <img src="assets/banner-1.svg" alt="ComfyUI Sandbox: the ComfyUI pixel logo resolving out of latent noise, with the tagline ComfyUI, sandboxed" width="100%">
 </p>
 
 <p align="center">
@@ -54,9 +54,7 @@ Docker or the NVIDIA Container Toolkit.
 **You need:**
 
 - Windows with hardware virtualization on (Linux support is on the roadmap),
-- WSL 2.4.4 or newer, with kernel 6.6 or newer (`comfyui-sandbox` installs or updates WSL's bundled kernel for you),
-- an NVIDIA GPU with a current Windows driver
- (AMD and Intel GPUs are not supported yet),
+- an NVIDIA GPU with a current Windows driver (AMD and Intel GPUs are not supported yet),
 - about 30 GB free for ComfyUI and PyTorch, plus room for your models.
 
 **1. Install `comfyui-sandbox`**, in PowerShell:
