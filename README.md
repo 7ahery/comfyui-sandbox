@@ -64,21 +64,32 @@ Docker or the NVIDIA Container Toolkit.
 Confirm that your custom kernel is 6.6 or newer. `prereqs` does not replace a custom kernel or update WSL
 solely because a kernel version is unknown.
 
-**1. Install [uv](https://docs.astral.sh/uv/)**, in PowerShell:
+**1. Install `comfyui-sandbox`**, in PowerShell:
+
+```powershell
+irm https://raw.githubusercontent.com/7ahery/comfyui-sandbox/main/install.ps1 | iex
+```
+
+It installs [uv](https://docs.astral.sh/uv/) with winget if you don't have it, then installs
+`comfyui-sandbox` with uv. [Read the script](install.ps1) first if you like, or run the steps
+yourself:
+
+<details>
+<summary><b>Install manually</b></summary>
 
 ```powershell
 winget install astral-sh.uv
 ```
 
-Then open a new terminal window, so `uv` is on your PATH.
-
-**2. Install `comfyui-sandbox`**:
+Open a new terminal window, so `uv` is on your PATH, then:
 
 ```powershell
 uv tool install git+https://github.com/7ahery/comfyui-sandbox@v1.0.0
 ```
 
-**3. Run ComfyUI Sandbox,** in PowerShell:
+</details>
+
+**2. Run ComfyUI Sandbox,** in PowerShell:
 
 ```powershell
 comfyui-sandbox

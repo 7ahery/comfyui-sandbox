@@ -8,6 +8,10 @@ break the command line or the files the tool writes.
 
 ## [Unreleased]
 
+### Added
+
+- A one-line install: `install.ps1` installs uv with winget when it is missing, then installs the tagged release with `uv tool install` and puts it on PATH.
+
 ### Fixed
 
 - Every new ComfyUI run checks sandbox isolation before launching. Failed or inconclusive checks show an advisory warning and ComfyUI still starts. The run window keeps the warning visible while ComfyUI runs.
