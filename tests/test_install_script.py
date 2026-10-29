@@ -16,7 +16,7 @@ import pytest
 ROOT = Path(__file__).resolve().parent.parent
 SCRIPT = ROOT / "install.ps1"
 VERSION = tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))["project"]["version"]
-SOURCE = f"git+https://github.com/7ahery/comfyui-sandbox@v{VERSION}"
+SOURCE = f"https://github.com/7ahery/comfyui-sandbox/archive/refs/tags/v{VERSION}.zip"
 # Printed after `iex` returns: the script must hand the window back, never `exit` it.
 AFTER = "still-open"
 
@@ -103,12 +103,15 @@ def test_a_failed_install_is_reported_and_not_called_a_success(tmp_path):
     assert "is installed" not in out
 
 
-def test_the_script_and_the_readme_pin_the_project_version():
+def test_the_script_pins_the_project_version():
     script = SCRIPT.read_text(encoding="utf-8")
     readme = (ROOT / "README.md").read_text(encoding="utf-8")
     tag = f"v{VERSION}"
 
     assert re.findall(r"\$Version = '([^']+)'", script) == [tag]
-    assert set(re.findall(r"comfyui-sandbox@(v[\d.]+)", readme)) == {tag}
-    # The one-liner fetches the script from main, so a release only has to bump the pins above.
+    assert set(re.findall(r"comfyui-sandbox/archive/refs/tags/(v[\d.]+)\.zip", readme)) <= {tag}
+    # uv needs Git on PATH to fetch a git+ source, and a fresh Windows has none.
+    assert re.findall(r'\$Source = "([^"]+)"', script) == [SOURCE.replace(tag, "$Version")]
+    assert "uv tool install git+" not in readme
+    # The one-liner fetches the script from main, so a release only has to bump the pin above.
     assert "raw.githubusercontent.com/7ahery/comfyui-sandbox/main/install.ps1 | iex" in readme

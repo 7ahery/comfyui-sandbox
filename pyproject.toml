@@ -1,6 +1,6 @@
 [project]
 name = "comfyui-sandbox"
-version = "1.0.0"
+version = "1.1.0"
 description = "Set up and run ComfyUI in an isolated WSL2 distro with Docker, from one command."
 authors = [{ name = "Michael Tahery" }]
 license = "MIT"

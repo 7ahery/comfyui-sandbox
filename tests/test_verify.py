@@ -4,6 +4,7 @@ The fake Runner plays verify.sh's output; the fake Http plays what answers on th
 """
 
 import json
+from importlib.metadata import version
 
 import pytest
 from test_check import Machine
@@ -59,7 +60,7 @@ def own(home, distro="comfy-docker", *, gpu="nvidia", models=("wsl", "/home/comf
         "port": port,
         "models": {"mode": models[0], "path": models[1]},
         "gpu": {"mode": gpu},
-        "deployed_by": "1.0.0",
+        "deployed_by": version("comfyui-sandbox"),
         "created_at": "2026-01-01T00:00:00Z",
         "updated_at": "2026-01-01T00:00:00Z",
         "answers": {},

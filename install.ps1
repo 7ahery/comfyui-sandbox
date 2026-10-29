@@ -2,15 +2,16 @@
 #
 #     irm https://raw.githubusercontent.com/7ahery/comfyui-sandbox/main/install.ps1 | iex
 #
-# It runs the README's manual steps: install uv with winget if it is missing, then
-# `uv tool install` the tagged release, and put uv's tool folder on PATH. The line fetches this
+# It installs uv with winget if it is missing, then installs the tagged release with
+# `uv tool install` and puts uv's tool folder on PATH. The line fetches this
 # script from main, so $Version is what pins the release: bump it with each release. Everything runs inside a
 # function and stops with `return`, never `exit`, because under `iex` an `exit` closes the user's
 # window. Keep it Windows PowerShell 5.1 compatible: that is the PowerShell every Windows has.
 
 function Install-ComfyuiSandbox {
-    $Version = 'v1.0.0'
-    $Source = "git+https://github.com/7ahery/comfyui-sandbox@$Version"
+    $Version = 'v1.1.0'
+    # GitHub's archive of the tag, not a git+ URL: uv needs Git to fetch those, and a fresh Windows has none.
+    $Source = "https://github.com/7ahery/comfyui-sandbox/archive/refs/tags/$Version.zip"
 
     # Adds the PATH entries saved for the user and the machine to this window, keeping what it
     # already has, so a program installed a moment ago runs without opening a new window.

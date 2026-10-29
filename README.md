@@ -7,7 +7,7 @@
   <img alt="Platform: Windows" src="https://img.shields.io/badge/platform-Windows%20%2B%20WSL2-22d3ee?style=flat-square">
   <img alt="Python 3.14" src="https://img.shields.io/badge/python-3.14-22d3ee?style=flat-square">
   <img alt="GPU: NVIDIA" src="https://img.shields.io/badge/GPU-NVIDIA%20(CPU%20fallback)-76b900?style=flat-square">
-  <img alt="Status: 1.0.0" src="https://img.shields.io/badge/status-1.0.0-f59e0b?style=flat-square">
+  <img alt="Status: 1.1.0" src="https://img.shields.io/badge/status-1.1.0-f59e0b?style=flat-square">
 </p>
 
 <p align="center">
